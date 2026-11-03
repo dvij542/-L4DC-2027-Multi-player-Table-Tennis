@@ -8,8 +8,8 @@
 %   discounted point-outcome utility and fixed low-level execution controllers.
 % Method choices drafted here: compact probability-vector parameters for the
 % potential solver; categorical PPO self-play with a frozen opponent pool.
-% Experimental measurements and implementation hyperparameters remain pending.
-% No empirical superiority, measured correlation, or numerical results are asserted.
+% Table 1 contains supplied competitive win rates; other experimental
+% measurements and implementation hyperparameters remain pending.
 \documentclass[pmlr]{jmlr}
 \usepackage{times}
 \usepackage{amsmath,amssymb,booktabs}
@@ -370,20 +370,25 @@ For example, one strategy always returns toward the left-deep target when attack
 Iterated best response (IBR) alternates updates of each player's attack and defense parameters against the other's current strategy \citep{spica2020drone}. At a given state, use simulated returns over horizon $H_{\mathrm{IBR}}$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}. Report the number of response rounds, initialization, rollout budget, and runtime; finite rounds or local response optimization need not yield an equilibrium. Compare equal online computation budgets as well as the quality obtained with a larger offline response-search budget. Finally, compare the two proposed methods directly.
 
 \paragraph{Competitive outcomes.}
-Evaluate each proposed method against all fifteen static pairings, the random baseline, IBR, and the other proposed method. Report the complete $5\times3$ matrix of static-opponent win rates, its unweighted average, and its minimum. The minimum identifies vulnerabilities that an average over weak static opponents could conceal. Table~\ref{tab:performance} summarizes these comparisons; each win-rate entry uses balanced sides and initial roles.
+Table~\ref{tab:performance} reports point win rates for six methods against the fifteen static pairings, the random baseline, IBR, and Potential Adaptive Match. The static columns give the mean and minimum win rates across the fifteen pairings. Potential BR achieves the highest static mean (83.0\%), static minimum (70.0\%), and win rate against Random (77.5\%). Potential IBR achieves the highest win rate against IBR (62.5\%), while Nash-Q achieves the highest win rate against Potential Adaptive Match (57.5\%). These competitive outcomes alone do not establish equilibrium quality.
 
 \begin{table}[t]
 \centering
 \small
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccccc}
 \toprule
-Method & Static mean & Static minimum & Random & IBR & Other proposed\\
+Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & \shortstack{Other proposed\\(Potential Adaptive\\Match)}\\
 \midrule
-$\alpha$-potential & \TBD & \TBD & \TBD & \TBD & \TBD\\
-Self-play RL & \TBD & \TBD & \TBD & \TBD & \TBD\\
+Nash-Q & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
+BR-Q & 80.8\% & 65.0\% & 70.0\% & 45.0\% & 52.5\%\\
+Potential IBR & 82.5\% & 67.5\% & 70.0\% & 62.5\% & 50.0\%\\
+Potential BR & 83.0\% & 70.0\% & 77.5\% & 57.5\% & 50.0\%\\
+Potential Adaptive Match & 79.8\% & 60.0\% & 75.0\% & 60.0\% & 50.0\%\\
+Potential Minimax & 81.0\% & 65.0\% & 72.5\% & 60.0\% & 47.5\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. All measurements are pending; ``Other proposed'' denotes the direct comparison between the two methods. The fifteen individual static-opponent results are also reported as a $5\times3$ matrix.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. ``Other proposed'' reports performance against Potential Adaptive Match.}
 \label{tab:performance}
 \end{table}
 
@@ -397,7 +402,7 @@ For a frozen profile $\pi=(\pi^1,\pi^2)$, measure the state-dependent response g
 \end{equation}
 The notation $V^i(x;\pi)$ denotes the same discounted return as Equation~\eqref{eq:value}, evaluated under the indicated policies. Search for responses against each frozen opponent using multiple initializations and independently trained response policies, then estimate their gains on fresh rollouts. Include the original player policy among response candidates. Report both gains within the compact potential-policy family and gains found using a common, more expressive state-conditioned response class $\Pi^i_{\mathrm{eval}}$. A response found by finite search provides a lower bound on the supremum, not an upper-bound certificate of Nash regret. For the potential method, additionally plot held-out unilateral-change residuals and assess value estimates against independent simulated returns.
 
-\draftresult{The complete static-opponent matrices and win-rate table; confidence intervals; best-response gains for both players; potential residual and value-error plots; online computation time. State which comparisons are supported by these measurements.}
+\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; definitions and implementation details for the six evaluated methods; best-response gains for both players; potential residual and value-error plots; online computation time. State which comparisons are supported by these measurements.}
 
 \subsection{Effects of Data, Horizon, and Stochasticity}
 \label{sec:resultsablation}
