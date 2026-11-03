@@ -1,0 +1,15 @@
+\subsection{Network architecture}
+
+We use a simple feed-forward deep neural network with ReLU activation except for the last layer to represent the value function and the potential function. The network for value function consists of $3$ hidden layers with $(128,128,64)$ hidden features on each layer. The network for potential function consists of $3$ hidden layers with $(384,384,192)$ hidden features on each layer. 
+
+\subsection{Training}
+
+We use a learning rate of $0.0001$ and train for $50000$ epochs (both value functions and potential function). Each race consists of $500$ time steps with $dt=0.1s$, hence $50s$ race.
+
+\section{Self-play RL training}
+
+We use standard PPO training parameters as available in stable\_baselines3 with batch size $1024$, number of epochs $5$, learning rate $0.0005$, $\gamma=0.99$ and $8$ environments in parallel. The observation used is the same as the joint state input used for our work for fair comparison. The reward design used is also the same as the utility used in our work. We train for $100K$ time-steps for each iteration of self-play RL where we switch agents for training for total of $99$ times i.e. $33$ cycles of training for $3$ agents
+
+\section{Iterated Best Response (IBR) hyperparameters}
+
+We use $N=6$ iterations for iterated best response with the same utility as the one used in our work and with horizon length of $2s$ with $20$ time-steps of length $dt=0.1s$. The solve time with the following parameters is $0.1s$ which is comparable to the compute time required by our algorithm

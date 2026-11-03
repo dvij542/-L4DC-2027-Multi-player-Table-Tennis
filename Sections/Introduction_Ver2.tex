@@ -1,0 +1,82 @@
+Autonomous racing is a challenging task in autonomous vehicle development, requiring efficient planning, reasoning, and action in high-speed, dynamic, and constrained environments—key for addressing edge cases in broader autonomous driving. Recent advances, such as deep reinforcement learning (RL), have enabled vehicles to outperform human drivers \citep{wurman2022outracing, kaufmann2023champion}. However, challenges remain in optimizing strategies against other autonomous agents and in reducing the extensive training times required for achieving competitive performance.
+
+
+
+
+A key challenge in multi-agent autonomous racing is developing real-time competitive strategies that consider the presence of other autonomous vehicles while maintaining high speeds \citep{betz2022autonomous}. Algorithms must balance lap-time optimization with aggressive driving, collision avoidance, and dynamic responses to competitors. While existing research on single-agent racing focuses on computing race lines based on vehicle dynamics and track constraints \citep{rosolia2017autonomous, balaji2020deepracer, song2021autonomous, herman2021learn, liniger2015optimization, kabzan2020amz}, these approaches cannot accommodate complexities of multi-agent settings, where interactions such as blocking and overtaking become crucial. To address these challenges, multi-agent racing requires strategies that account for the interdependent behaviors of agents, with frameworks like Nash equilibrium offering a way to anticipate and adapt to competitors' actions in a competitive environment.
+
+
+
+Computation of Nash equilibrium is generally computationally challenging. Several studies have investigated its computation in autonomous racing, but many limitations persist. Many works use kinematic vehicle models \citep{notomista2020enhancing, wang2019bgame, wang2021game, liniger2019noncooperative, jia2023rapid, williams2017autonomous, sinha2020formulazero, schwarting2021stochastic}, which simplify vehicle dynamics but fail to capture the nonlinear tire forces that are critical for high-speed racing. Others rely on open-loop control via receding horizon techniques \citep{buyval2017deriving, jung2021game, wang2019bgame, wang2021game, liniger2019noncooperative, jia2023rapid, schwarting2021stochastic, zhu2023sequential, zhu2024sequential}, focusing on finite-horizon planning at the expense of long-term strategies. Additionally, many methods assume two-player zero-sum game \citep{wang2019bgame, thakkar2022hierarchical, kalaria2023towards,zheng2022game} or two-team competition \citep{thakkar2024hierarchical}, which are insufficient for races involving more than two agents. Alternative approaches, such as Stackelberg games \citep{notomista2020enhancing, liniger2019noncooperative}, iterative linear quadratic games \citep{schwarting2021stochastic}, and local Nash equilibrium \citep{zhu2023sequential, zhu2024sequential}, provide partial local solutions but do not fully capture the global competitive nature of multi-agent racing.
+
+Towards this end, we propose \textbf{$\alpha$-RACER} ($\alpha$-potential function based \textbf{R}eal-time \textbf{A}lgorithm for \textbf{C}ompetitiv\textbf{E} \textbf{R}acing). We study the following key question:
+\begin{quote}
+    How to design real-time algorithms for  autonomous racing that approximate Nash equilibrium, while accounting for nonlinear tire forces, long-horizon planning and accommodating competitive interaction in any number of competing vehicles?
+\end{quote}
+We highlight three main contributions of this work towards answering the question posed above.
+
+\noindent\textbf{1. \underline{Modeling Contribution}:} We model the multi-agent interaction as an infinite-horizon discounted dynamic game and introduce a novel policy parametrization to enable competitive maneuvers. Specifically, we propose MPC-based policies that track a specially designed, parameterized \textit{reference trajectory}, while avoiding other vehicles. This trajectory is derived by adjusting the optimal single-agent race-line to account for the presence of other agents, enabling competitive racing maneuvers such as overtaking and blocking. Additionally, we structure each agent’s immediate utility function to increase its relative progress along the track in comparison to other at each time-step.
+Moreover, our approach is modular with respect to the vehicle dynamics model. In this work, we use a nonlinear vehicle dynamics model that captures nonlinear tire forces, but the framework can also incorporate other advanced racing technologies, such as ``push-to-pass''. By designing the reference trajectory in this way, we integrate long-term strategic planning for optimizing lap times with tactical planning for effective competition with other cars.
+
+\noindent\textbf{2. \underline{Algorithmic Contribution}:}
+We present an algorithmic approach to compute Nash equilibrium of the dynamic game by leveraging the recent framework of dynamic \(\alpha\)-potential functions (developed in \citep{guo2023markov, maheshwari2024decentralized, guo2024alpha}). Specifically, we compute an \(\alpha\)-potential function that captures the change in each agent's (long-term) value function resulting from unilateral deviations in its policy parameters. The structure of \(\alpha\)-potential function allows us to approximate the Nash equilibrium as an optimizer of this function (refer Proposition \ref{prop: NE_def_PotMax}).
+We leverage this structure to develop a two-phase algorithmic approach to approximate the Nash equilibrium, consisting of an \textit{offline} and an \textit{online} phase. In the offline phase, we learn an \(\alpha\)-potential function using simulated game data. During the online phase, the agent observes the current state of the game and selects the policy parameters that maximize the potential function in that state. This approach enables autonomous agents to engage in competitive maneuvers with reduced computational demands.
+
+
+\noindent \textbf{3. \underline{Numerical Evaluation}:} We numerically validate the effectiveness of our approach by applying it to three-car autonomous racing scenarios. Our results show that the approximation gap of our learned potential function is small, enabling us to closely approximate Nash equilibrium strategies. We demonstrate that the maximizer of the potential function effectively captures competitive racing maneuvers. Furthermore, we show that our method outperforms opponent policies—obtained using iterated best response, and finite-horizon self-play reinforcement learning—in most cases.
+
+\paragraph{Other Related Works.} Several works in the autonomous racing literature use the solution concept of (open-loop) \textit{generalized Nash equilibrium} (e.g., \citep{wang2019bgame, jia2023rapid}) to incorporate hard collision avoidance constraints, which introduces added computational complexity. {In contrast, our modeling framework incorporates collision avoidance in two ways: \((i)\) through the MPC controller used to track the reference trajectory, and \((ii)\) by slowing down vehicles when they enter a pre-defined radius around each other.}
+
+Our algorithmic approach also contributes to the growing literature on computational game theory for multi-robot systems \citep{laine2021multi, cleac2019algames, fridovich2020efficient, liu2023learning, peters2024contingency, kavuncu2021potential, sadigh2016planning, wang2020game} by offering a new method to compute approximate Nash equilibrium.
+
+\paragraph{Organization.} In Section \ref{sec: Model}, we describe our model of multi-car racing as a dynamic game, including the policy parametrization, utility function, and vehicle dynamics model. In Section \ref{sec: Approximation}, we present our algorithmic approach. In Section \ref{sec: Numerical}, we evaluate the performance of our approach using a numerical racing simulator. Finally, we conclude with remarks in Section \ref{sec: Conclusion}.
+
+
+% \begin{table}[h!]
+%     \centering
+%     \begin{tabular}{|c|c|c|c|c|}
+%         \hline
+%         \textbf{Ref.} & \textbf{Vehicle Model} & \textbf{Game Model} &  \textbf{\# of cars} & \textbf{Planning}  \\ \hline
+% \cite{buyval2017deriving} & Dynamic & Known Dynamic Obstacle & \(2\) & Local
+%         \\
+% \hline\cite{jung2021game} & Dynamic & Stackelberg Game & \(\geq 2\)& Local\\ 
+% \hline 
+% \cite{notomista2020enhancing} & Kinematic & Zero-sum (IBR)  & 2& Local
+% \\
+% \hline 
+% \cite{wang2019bgame} & Kinematic & Zero-sum (IBR) Game & \(2\)& Local
+% \\
+% \hline 
+% \cite{wang2021game} & Kinematic & Non-zero sum game & \(\geq 2\)& Local
+% \\
+% \hline 
+% \cite{liniger2019noncooperative} & Kinematic & Stackelberg/Nash Game & 2& Local
+% \\
+% \hline 
+% \cite{jia2023rapid}  & Kinematic & Potential Game & \(\geq 2\)& Local
+% \\ \hline
+% \cite{williams2017autonomous} & Kinematic & IBR & \(\geq 2\) & Local
+% \\
+% \hline
+% \cite{sinha2020formulazero} & Kinematic & Robust RL / Self play & \(\geq 2\) & Local 
+% \\
+% \hline
+% \cite{schwarting2021stochastic} & Kinematic & iLQG & \(\geq 2\) & Local 
+% \\
+% \hline
+% \cite{thakkar2022hierarchical}  &  Dynamic & Zero-sum & 2& Global
+% \\
+% \hline 
+% \cite{kalaria2023towards}&  Dynamic & Zero-sum & 2& Global
+% \\
+% \hline
+% \cite{zhu2023sequential, zhu2024sequential} & Dynamic & General-sum & \(\geq 2\) & Local
+% \\
+% \hline
+% \textbf{Ours} & Dynamic & General-sum & \(\geq 2\) & Global
+% \\
+% \hline
+%     \end{tabular}
+%     \caption{Comparison to previous literature on game theoretic planning for multi-car autonomous racing.}
+%     \label{tab:sample_table}
+% \end{table}

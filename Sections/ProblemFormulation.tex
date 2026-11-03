@@ -1,0 +1,111 @@
+In this section, we first present the necessary preliminaries on dynamic game theory, followed by a novel model of multi-car autonomous racing as an instantiation of a dynamic game.
+\subsection{Preliminaries on Dynamic Game Theory}\label{ssec: Preliminaries}
+Consider a game involving \(N\) strategic players, with the set of players denoted as \(\mc{N} := \{1, 2, \dots, N\}\). The game proceeds in discrete time steps, indexed by \(t \in \mathbb{N}\). 
+At each time step \(t\), the state of player \(i \in \mc{N}\) is represented as \(\mathbf{x}_t^i \in \mc{X}^i\), where \(\mc{X}^i\) is the set of all possible states for player \(i\). The joint state of all players at time \(t\) is denoted by \(\mathbf{x}_t = \left( \mathbf{x}_t^i\right)_{i\in \mc{N}} \in \mc{X}\), where \(\mc{X} := \times_{i\in \mc{N}} \mc{X}^i\).
+At every time step \(t\), each player \(i \in \mc{N}\) selects an action \(\mathbf{u}_t^i \in \mc{U}^i\), where \(\mc{U}^i\) is the set of feasible actions for player \(i\). The joint action at time \(t\) is expressed as \(\mathbf{u}_t = \left( \mathbf{u}_t^i\right)_{i\in \mc{N}}  \in \mc{U}\), where \(\mc{U} := \times_{i\in \mc{N}} \mc{U}^i\).
+
+For each player \(i \in \mc{N}\), given the current state \(\mathbf{x}_t^i\) and the joint action \(\mathbf{u}_t\), the state transitions to a new state at time \(t+1\) according to the dynamics \(\mathbf{x}_{t+1}^i = f^i(\mathbf{x}_t, \mathbf{u}_t^i),\)
+where \(f^i: \mc{X} \times \mc{U}^i \to \mc{X}^i\) describes the state transition dynamics of player \(i\). 
+Finally, at each time step \(t\), player \(i \in \mc{N}\) receives a reward \(r^i_t(\mathbf{x}_t, \mathbf{u}_t, \mathbf{x}_{t+1})\), which depends on the current and next joint state, and joint action of all players.
+We assume that players select their actions based on a state feedback strategy, denoted by \(\pi^i: \mc{X} \to \mc{U}^i\), such that \(\mathbf{u}_t^i = \pi^i(\mathbf{x}_t)\).  The set of strategies of player \(i \in \mc{N}\) is denoted by \(\Pi^i\), and the set of joint strategies by \(\Pi = \times_{i\in\mc{N}} \Pi^i\).
+In our study, we consider a parameterized set of policies. Specifically, for any player \(i \in \mc{N}\), the player adopts a policy \(\pi^i(\cdot;\theta^i) \in \Pi^i\), where \(\theta^i \in \Theta^i\) represents the policy parameter.
+We consider non-myopic players who aim to maximize their long-term discounted utility starting from any state \(\mathbf{x} \in \mc{X}\). Specifically, each player \(i \in \mc{N}\) selects a parameter \(\theta^i \in \Theta^i\) to optimize the discounted infinite-horizon objective, 
+\(
+    V^i(\mathbf{x}, \theta^i, \theta^{-i}) := \mathbb{E}\left[ \sum_{t=0}^{\infty} \gamma^t r^i_t(\mathbf{x}_t, \mathbf{u}_t, \mathbf{x}_{t+1}) \right],
+\)
+where \(\gamma \in [0,1)\) is the discount factor, \(\mathbf{x}_0 = \mathbf{x}\), \(\mathbf{u}_t^i = \pi^i(\mathbf{x}_t; \theta^i)\), \(\mathbf{u}_t^{-i} = \pi^{-i}(\mathbf{x}_t; \theta^{-i})\)\footnote{We use the standard game theory notation of \(\pi^{-i}\) (resp. \(\theta^{-i}\)) to denote the joint policy (joint policy parameters) of all players except player \(i\).}, and the state transitions according to \(\mathbf{x}_{t+1}^i = f^i(\mathbf{x}_t^i, \mathbf{u}_t^i)\).
+
+\begin{definition}\label{def: NE}
+    For every \(\mathbf{x} \in \mc{X}\), a joint strategy profile \(\theta^\ast \in \Theta\) is called a \emph{\(\epsilon\)-Nash equilibrium} if, for every \(i \in \mc{N}, \theta^i\in \Theta^i\),
+\(
+    V^i(\mathbf{x}, \theta^{\ast,i}, \theta^{\ast, -i}) \geq V^i(\mathbf{x}, {\theta}^i, \theta^{\ast, -i}) - \epsilon. \)
+If \(\epsilon = 0\), the strategy profile \(\theta^\ast\) is referred to simply as a Nash equilibrium. 
+\end{definition}
+\subsection{Multi-car Racing as a Dynamic Game}\label{ssec: RacingAsGame}
+In this subsection, we formulate the multi-car racing problem as a dynamic game by detailing the various components of the game.
+
+\vspace{0.1cm}
+\noindent \textbf{\underline{Set of Players}.} Each car is modeled as a strategic player in the dynamic game.
+
+\vspace{0.1cm}
+\noindent \textbf{\underline{Set of States and Actions}.} For every car \(i \in \mc{N}\), the state \(\mathbf{x}^i=(p_x^i, p_y^i, \phi^i, v_x^i, v_y^i, \omega^i)\), where \((p_x^i, p_y^i)\) denote the longitudinal and lateral position of car \(i\) in the \textit{Frenet frame} along the track; \(\phi^i\) denotes the orientation of the car in the {Frenet frame} along the track; {\((v_x^i, v_y^i)\) denote the longitudinal and lateral velocities of car \(i\) in the {Frenet frame}}; and \(\omega^i\) denotes the angular velocity of car \(i\) in the body frame. Additionally, \(\mathbf{u}^i = (d^i, \delta^i)\), where \(\delta^i \in [\delta_{\min}, \delta_{\max}]\) denotes the steering angle of car \(i\) and \(d^i \in [d_{\min}, d_{\max}]\) is the throttle input of car \(i\). 
+
+\vspace{1mm}
+\noindent \textbf{\underline{Dynamics}.} The most widely used dynamics models in the context of racing are the \textit{kinematic} \citep{jia2023rapid, notomista2020enhancing, wang2019game, wang2021game} and \textit{dynamic bicycle models} \citep{Kalaria2023AdaptivePA, Brunke2020LearningMP}. In this work, we use the dynamic model as it can accurately model the high-speed maneuvers of the car. A detailed vehicle model description is in Supplementary. 
+On top of the standard dynamic bicycle model, we also incorporate near-collision behavior in our dynamics. Suppose two cars, $i$ and $j$, are within an unsafe distance from each other and $p_{x,t}^{i} > p_{x,t}^{j}$, we reduce their velocities to replicate the time lost due to collision in an actual race with more penalty for the car behind than the one ahead. More concretely, we update the dynamics as $v_{x,t+1}^{i} = (1/2)\cdot v_{x,t}^{i}$ and $v_{x,t+1}^{j} = (1/3)\cdot v_{x,t}^{j}$. Moreover, if a car goes out of track boundary, i.e., when $|p_{y,t}^i|>{w_{\max}}/{2}$ (where \(w_{\max}\) is the width of track) we penalize it by reducing its speed and re-align the car along the track. More concretely, we update the dynamics as $v_{x,t+1}^i = v_{x,t}^i/2$ and $\phi_{t+1}^i=0$. 
+
+
+\vspace{1mm}
+\noindent 
+\textbf{\underline{Policy Parametrization}.} In this section, we introduce a \emph{novel} policy parametrization \((\Theta^i)_{i\in\mc{N}}\) designed to capture competitive driving behaviors, such as overtaking, blocking, apex hugging, late braking, and early acceleration. To achieve this, we restrict the set of policies to MPC controllers that track a \textit{reference trajectory} specifically designed to encode such competitive behaviors in multi-car racing. For each car \(i \in \mc{N}\), the parametrization of the MPC controller and its reference trajectory is represented by \(\theta^i\), which is characterized by five variables: \((q^i, \zeta^i, s_1^i, s_2^i, s_3^i)\). Before describing these parameters in detail, we present the MPC controller.
+
+
+At each time step \(t\), for every car \(i \in \mc{N}\), the MPC controller is determined by solving an optimization problem (cf. \eqref{eqn:opt}) over a planning horizon of \(K\) steps, indexed by \(k\). The optimization is parameterized by: \((a)\) the longitudinal and lateral positions on the reference trajectory (to be defined shortly), denoted by \((p_{x|t}^{\textsf{ref},i,k},p_{y|t}^{\textsf{ref},i,k})_{k\in [K]}\); \((b)\) the current state of car \(i\) at time \(t\), \(\mathbf{x}_t^i\); and \((c)\) the longitudinal and lateral positions of the opponent cars located just behind and just ahead of car \(i\). We use the notation \(j^\ast, j_\ast \in \mc{N}\) to denote the car in front and the car behind car \(i\) at the start of the planning window, based on longitudinal position. For any opponent vehicle \( j \in \{ j^\ast, j_\ast \} \), we assume that the lateral velocity is zero during the planning horizon for the MPC controller, and the longitudinal velocity remains constant at its value at the start of the planning horizon. That is, for every \(k\in [K]\), \(p_{y|t}^{j,k} = p_{y,t}^{j}\), and \(p_{x|t}^{j,k+1} = p_{x|t}^{j,k} + \Delta t \cdot v_{x,t}^{j}\).
+% ,where \(p_{x,t}^{j}\), \(p_{y,t}^{j}\), and \(v_{x,t}^{j}\) represent the longitudinal position, lateral position, and longitudinal velocity of the opponent car.
+% , respectively, in the Frenet frame. 
+With this setup, we can now describe the MPC optimization problem:
+\vspace{-0.2cm}
+\begin{subequations} \label{eqn:opt}  
+\begin{align}
+\min_{(\textbf{x}_t^{i,k})_{k=1}^{K},(\textbf{u}_t^{i,k})_{k=0}^{K-1}} &\sum_{k=1}^K \left\| \begin{pmatrix} p_{x|t}^{i,k} - p_{x|t}^{\textsf{ref},i,k} \\ p_{y|t}^{i,k} - p_{y|t}^{\textsf{ref},i,k} \end{pmatrix} \right\|_{\textbf{Q}}^2 
++ \sum_{k=1}^{K-1} \left\| \begin{pmatrix} d_t^{i,k} - d_t^{i,k-1} \\ \delta_t^{i,k} - \delta_t^{i,k-1} \end{pmatrix} \right\|_{\textbf{R}}^2  \label{eq: MPCObjective}\\
+\text{s.t.  } &\mathbf{x}_{t}^{i,k+1} = f^i (\mathbf{x}_t^{k},\mathbf{u}_t^{i,k}), \quad \forall k = 0,1,..., K-1,  \label{eq: MPCDynamics}\\
+\text{           } &\mathbf{x}_t^{i,0} = \mathbf{x}_t^i, \label{eq: MPCInitialCondition}\\
+\text{           } &\Delta \delta_{\min}^i \le \delta_t^{i,k} - \delta_t^{i,k-1} \le \Delta \delta_{\max}^i, \quad \forall k = 0,1,..., K-1, \label{eq: MPCControlConstraints}\\
+&d_{\min}^i \le d_t^{i,k} \le d_{\max}^i, \quad \forall k = 0,1,..., K-1, \label{eq: MPCThrottleConstraints}\\
+& |p_{y,t}^{i,k}| \leq w_{\max}/2, \quad \forall k = 1,..., K, \label{eq: MPCStateConstraintTrack}\\
+& |p_{y|t}^{i,k} - p_{y|t}^{j,k}| \geq p_y^{\min}, \quad \forall k = 1,..., K, \forall j \neq i, \label{eq: MPCLateralCollisionAvoidance}\\
+& |p_{x|t}^{i,k} - p_{x|t}^{j,k}| \geq p_x^{\min}, \quad \forall k = 1,..., K, \forall j \neq i, \label{eq: MPCLongitudinalCollisionAvoidance} 
+\end{align}
+\end{subequations}
+where \(\mathbf{x}_t^{i,k} = (p_{x|t}^{i,k}, p_{y|t}^{i,k}, \phi_{t}^{i,k}, v_{x|t}^{i,k}, v_{y|t}^{i,k}, \omega_t^{i,k})\) is the state of car \(i\) in the Frenet frame at the \(k^{\textsf{th}}\) step in the planning horizon; \(\mathbf{u}_t^{i,k} = (d_t^{i,k}, \delta_{t}^{i,k})\) is the control input of car \(i\) at the \(k^{\textsf{th}}\) step in the planning horizon; \(w_{\max}\) is the track length, and \(p_x^{\min}\) and \(p_y^{\min}\) are the minimum required separation between two cars in the longitudinal and lateral directions, respectively; \(d_{\min}^i\) and \(d_{\max}^i\) are the throttle limits, and \(\Delta \delta_{\min}^i\) and \(\Delta \delta_{\max}^i\) are the steering rate limits; and $\textbf{Q}$ and $\textbf{R}$ are positive definite matrices. Following the MPC approach, the control input at time \(t\) is then \(\mathbf{u}_t^{i,0}\).
+
+In \eqref{eqn:opt}, \eqref{eq: MPCObjective} defines the MPC objective, where the first term penalizes the tracking error relative to the reference trajectory, and the second term penalizes variations in the control input. \eqref{eq: MPCDynamics} represents the system dynamics constraint, while \eqref{eq: MPCInitialCondition} ensures the planning horizon begins at the car's current state. \eqref{eq: MPCControlConstraints} and \eqref{eq: MPCThrottleConstraints} enforce constraints on the control inputs, including throttle limits and steering rate bounds. \eqref{eq: MPCStateConstraintTrack} ensures the car stays within the track boundaries, and \eqref{eq: MPCLateralCollisionAvoidance} and \eqref{eq: MPCLongitudinalCollisionAvoidance} enforce the minimum separation between vehicles in the lateral and longitudinal directions, respectively. Next, we describe the policy parameter \(\theta^i = (q^i, \zeta^i, s_1^i, s_2^i, s_3^i) \in \mathbb{R}^5\), which parametrizes the policy.
+
+
+\((i)\) \textbf{Parameter \(q^i\):} In \eqref{eq: MPCObjective}, we take $\textbf{R}=\textbf{I}$ and $\textbf{Q}=q^i\cdot \textbf{I}$, where \(\mathbf{I}\) is the identity matrix. A higher \(q^i\) value results in a more aggressive controller that closely follows the racing line, but it can introduce oscillations that may increase lap time. In contrast, a lower \(q^i\) value allows for smoother merging with reduced oscillations, though it may result in larger lateral errors, increased time loss at corners, and a higher risk of track boundary violations.
+
+\textit{(ii)} \textbf{Parameter \(\zeta^i\):} We use this parameter to develop a perturbed version of the optimal (single-agent) race-line (see Supplementary for a discussion on race-line), which is generated by sampling points along the optimal racing line at time intervals of \(\Delta t\). More formally, let the optimal race-line be denoted by \(\mathbf{x}^{\textsf{rl},i}\). Given the current state \(\mathbf{x}_t^i\), we find the closest point on the race-line and consider a race-line starting at time \(t\), denoted by \(\bar{\mathbf{x}}_t^{\textsf{rl},i}\). Using this, we compute a trajectory of length \(K\), denoted by \((p_{x|t}^{\textsf{pert},i,k}, p_{y|t}^{\textsf{pert},i,k})_{k \in [K]}\). Specifically, for every \(k \in [K]\), we construct:
+\[
+p_{x|t}^{\textsf{pert},i,k} = p_{x|t}^{\textsf{pert},i,k-1} + v_{x|t}^{\textsf{pert},i,k-1} \cdot \Delta t, \quad p_{y|t}^{\textsf{pert},i,k} = p_{y|t}^{\textsf{pert},i,k-1} + v_{y|t}^{\textsf{pert},i,k-1} \cdot \Delta t,
+\]
+where \(v_{x|t}^{\textsf{pert},i,k-1} = \zeta^i \bar{v}_{x,t+k-1}^{\textsf{rl},i}\) and \(v_{y,t}^{\textsf{pert},i,k-1} = \zeta^i \bar{v}_{y,t+k-1}^{\textsf{rl},i}\) are the perturbed race-line velocities. Higher values of \(\zeta^i\) capture how aggressively the vehicle wants to follow the optimal race-line.
+
+
+\textit{(iii)} \textbf{Parameters \(s_1, s_2, s_3\):}  
+% We define \((p_{x,t}^{\textsf{ref},i,k}, p_{y,t}^{\textsf{ref},i,k})\) is the reference trajectory for car \(i\), which is specially designed to capture the competitive racing behavior. 
+    The reference trajectory, \((p_{x|t}^{\textsf{ref},i,k}, p_{y|t}^{\textsf{ref},i,k})\), is generated by modifying the perturbed race-line  \((p_{x|t}^{\textsf{pert},i,k}, p_{y|t}^{\textsf{pert},i,k})_{k\in[K]}\) by accounting for the positions and velocities of the cars immediately ahead (in terms of longitudinal coordinates) of the ego car and immediately behind (in terms of longitudinal coordinates) ego car. Let's denote the ego car by \(i\), the car immediately ahead of this car by \(j^\ast\), and the one immediately behind by \(j_\ast\). We define the reference trajectory as follows \(p_{y|t}^{\textsf{ref}, i,k} = \textsf{clip}({p}_{y|t}^{\textsf{pert}, i, k} + {p}_{y|t}^{\textsf{ot}, i, k} +  {p}_{y|t}^{\textsf{bl},i,k}, [-w_{\max},w_{\max}]),\)
+    where 
+\begin{align*}
+{p}_{y|t}^{\textsf{ot},i,k} & = \textsf{sign}({p}_{y,t}^i - {p}_{y,t}^{j^\ast})
+            \max\left\{(s_1-  |({p}_{y,t}^i - {p}_{y,t}^{j^\ast})|) \exp\left(-s_2 \left(\Delta p_{x|t}^{i,j^\ast,k}\right)^2 \right)  , 0\right \}  \\ 
+            & \quad + \textsf{sign}({p}_{y,t}^i - {p}_{y,t}^{j_\ast})
+            \max\left\{(s_1- |({p}_{y,t}^i - {p}_{y,t}^{j_\ast})|)\exp\left(-s_2 \left(\Delta p_{x|t}^{i,j_\ast,k}\right)^2 \right) , 0\right \}, 
+    \end{align*}
+    is an adjustment for overtaking that smoothly changes the trajectory of the ego vehicle opposite the leading vehicle to overtake. Here, for any \(j\in \{j^\ast, j_\ast\}\),
+ \(\Delta p_{x|t}^{i,j,k} 
+ = p_{x|t}^{\textsf{pert},i,k} - p_{x|t}^{j,k}\), and
+\begin{align*}
+    \bar{p}_{y|t}^{\textsf{bl},i,k} &= \mathbbm{1}(v_{x|t}^{\textsf{pert},i,k}\leq v_{x,t}^{j_\ast})\mathbbm{1}(p_{x|t}^{\textsf{pert},i,k}\geq p_{x|t}^{j_\ast,k}) h(p_{y|t}^{j_\ast,k}, p_{x|t}^{\textsf{pert},i,k},v_{x|t}^{\textsf{pert},i,k},v_{x,t}^{j_\ast},\Delta p_{x|t}^{i,j_\ast,k})\\
+    &+\mathbbm{1}(v_{x|t}^{\textsf{pert},i,k}\leq v_{x,t}^{j^\ast})\mathbbm{1}(p_{x|t}^{\textsf{pert},i,k}\geq p_{x|t}^{j^\ast,k}) h(p_{y|t}^{j^\ast,k}, p_{x|t}^{\textsf{pert},i,k},v_{x|t}^{\textsf{pert},i,k},v_{x,t}^{j^\ast},\Delta p_{x|t}^{i,j^\ast,k})
+\end{align*}
+\noindent is the adjustment for blocking that smoothly changes the trajectory of the ego vehicle towards trailing vehicle to block it. Here, for any \(j\in \{j^\ast, j_\ast\}\),
+\begin{align*}
+&h(p_{y|t}^{j,k}, p_{x|t}^{\textsf{pert},i,k},v_{x|t}^{\textsf{pert},i,k},v_{x,t}^{j},\Delta p_{x|t}^{i,j,k}) \\ &\quad = (p_{y|t}^{j,k} - p_{y|t}^{\textsf{pert},i,k})(1-\exp(-s_3(v_{x|t}^{\textsf{pert},i,k}- v_{x,t}^{j})))\exp(-s_2(\Delta p_{x|t}^{i,j,k})^2).
+\end{align*} 
+ %    \begin{align*}
+ %    \bar{p}_{y,k}^{i,\textsf{block}} = \begin{cases}
+ %             -\max\left\{s_3 \exp\left(-s_4 \left(\frac{\bar{p}_{x,0}^{j_\ast}-\bar{p}_{x,0}^{i,\textsf{rl}}}{\bar{v}_{x,0}^{j_\ast}-\bar{v}_{x,0}^{i,\textsf{rl}}}- k \Delta t\right)^2 \right) - (\bar{p}_{y,0}^i - \bar{p}_{y,0}^{j_\ast}) , 0\right \} & \text{if} \ \bar{p}_{y,0}^i \geq \bar{p}_{y,0}^{j_\ast} \\ 
+ %            \max\left \{s_3 \exp\left(-s_4 \left(\frac{\bar{p}_{x,0}^{j_\ast}-\bar{p}_{x,0}^{i,\textsf{rl}}}{\bar{v}_{x,0}^{j_\ast}-\bar{v}_{x,0}^{i,\textsf{rl}}}- k \Delta t\right)^2 \right) - (\bar{p}_{y,0}^{j_\ast} - \bar{p}_{y,0}^i) , 0\right \} & \text{if} \ \bar{p}_{y,0}^i \leq \bar{p}_{y,0}^{j_\ast},
+ %        \end{cases} 
+ %    \end{align*}
+ % where \(j_\ast\) is the nearest car behind car \(i\).  
+    % \item[(iii)]  
+    % \item[(iv)] \(p_x^{\min}\) and \(p_y^{\min}\) are the minimum required separation between two cars in the longitudinal and lateral directions, respectively. 
+
+
+
+\noindent 
+\textbf{\underline{One-step Utility Function}.} 
+We consider that the one-step utility for every car is to maximize progress along track: \(
+\mathbb{R}\ni r^i(\mathbf{x}_t,\mathbf{u}_t,\mathbf{x}_{t+1}) = (p_{x,t+1}^{i} - \max_{j\neq i} p_{x,t+1}^{j})- (p_{x,t}^{i} - \max_{j\neq i} p_{x,t}^{j}). \)

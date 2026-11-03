@@ -1,0 +1,45 @@
+For any car \(i\), we denote its mass by \(m^i\), its moment of inertia in the vertical direction about the center of mass by \(I_z^i\), the distance between the center of mass (COM) and its front wheel by \(l_f^i\), and the distance from the COM to the rear wheel \(l_r^i\). Also, $\kappa_t^i$ denotes the inverse of radius of curvature of the track at $p_{x,t}^i$. Using these notations, the dynamics of car \(i\) is defined below:
+\begin{equation} \label{eqn:dyn_model}
+\begin{split}
+&\begin{bmatrix}
+    {p}_{x,t+1}^i \\
+    {p}_{y,t+1}^i \\
+    \phi_{t+1}^i \\
+    \tilde{v}_{x,t+1}^i \\
+    \tilde{v}_{y,t+1}^i \\
+    \omega^i_{t+1}
+\end{bmatrix}
+= \begin{bmatrix}
+    {p}_{x,t}^i \\
+    {p}_{y,t}^i \\
+    \phi_{t}^i \\
+    v_{x,t}^i \\
+    v_{y,t}^i \\
+    \omega^i_{t}
+\end{bmatrix} + \Delta t
+\begin{bmatrix}
+    v_{x,t}^i\\
+    v_{y,t}^i\\
+    \omega_t^i - \frac{\kappa_{t}^i}{(1-\kappa_{t}^i p_{y,t}^i)}(\tilde{v}_{x,t}^i \cos (\phi_t^i) - \tilde{v}_{y,t}^i \sin (\phi_t^i))\\
+    \frac{1}{m^i} (F_{r,x,t}^i - F_{f,y,t}^i \sin(\delta_t^i) + m^i \tilde{v}_{y,t}^i \omega_t^i)\\
+    \frac{1}{m^i} (F_{r,y,t}^i + F_{f,y,t}^i \cos(\delta_t^i) - m^i \tilde{v}_{x,t}^i \omega_t^i)\\
+    \frac{1}{I_z^i} (F_{f,y,t}^i l_f^i \cos(\delta_t^i) - F_{r,y,t}^i l_r^i) 
+\end{bmatrix} \\ 
+\end{split},
+\end{equation}
+where 
+\((i)\) \(v_{x,t}^i = \frac{1}{(1-\kappa_{t}^i p_{y,t}^i)}(\tilde{v}_{x,t}^i \cos (\phi_t^i) - \tilde{v}_{y,t}^i \sin (\phi_t^i))\), \(v_{y,t}^i = \tilde{v}_{x,t}^i \sin (\phi_t^i) + \tilde{v}_{y,t}^i \cos (\phi_t^i)\) are the velocities in frenet frame; \((ii)\) \(\tilde{v}_{x,t}^i, \tilde{v}_{y,t}^i\) are velocities in body frame; \((iii)\) \(
+F_{r,x,t}^i = (C_{1} - C_{2} \tilde{v}_{x,t}^i) d_t^i - {C_{3}} - {C_4} (\tilde{v}_{x,t}^i)^2
+\)
+is the longitudinal force on the rear tire at time \( t \). Here, \( C_1 \) and \( C_2 \) are parameters that govern the longitudinal force generated on the car in response to the throttle command, while \( C_3 \) and \( C_4 \) are parameters that account for the friction and drag forces acting on the car; \((iv)\) $F_{f,y,t}^i = D_f \sin(C_f \tan^{-1}(B_f \alpha_{f,t}^i))$ is the lateral force on the front tire depending on the slipping angle \(\alpha_{f,t}^i\), which is given by $\alpha_{f,t}^i = \delta^i_t - \tan^{-1}\left(\frac{\omega_t^i l_f + \tilde{v}_{y,t}^i}{\tilde{v}_{x,t}^i}\right)$. Here $B_{f}, C_f, D_f$ are the parameters of Pacejka tire model; and \((v)\)
+$F_{r,y,t}^i = D_r \sin(C_r \tan^{-1}(B_r \alpha_{r,t}^i))$ is the lateral force on the rear tire depending on the slipping angle \(\alpha_{r,t}^i\), which is given by $\alpha_{r,t}^i = \tan^{-1}\left(\frac{\omega_t^i l_r - \tilde{v}_{y,t}^i}{\tilde{v}_{x,t}^i}\right)$. Here $B_r, C_r, D_r$ are the parameters of Pacejka tire model. 
+
+
+% \todo[inline]{
+% 1. Experimental details in appendix 
+
+% 2. Add about appendix at relevant places 
+
+% 3. Algorithms for self-play RL and IBR 
+
+% }

@@ -1,0 +1,47 @@
+In this section, we provide a tractable approach to compute an approximate Nash equilibrium for the racing game described in Section \ref{sec: Model}. Core to our approach is the framework of \(\alpha\)-potential functions, recently introduced in \citep{guo2023markov,maheshwari2024decentralized, guo2024alpha}. 
+
+\subsection{\(\alpha\)-Potential Function}
+
+\begin{definition}\label{def: NearPotentialFunction}
+    A potential function \(\Phi: \mc{X}\times \Theta \rightarrow \mathbb{R}\) is called a \emph{dynamic \(\alpha\)-potential function}\footnote{For convenience, we adopt a slightly different definition of the \(\alpha\)-potential function than that in \cite{guo2023markov, maheshwari2024decentralized}; however, the results of this work extend to the definitions used there.} with \emph{approximation parameter} \(\alpha\) if for every \(\mathbf{x}\in \mc{X}, i\in \mc{N}, \theta\in \Theta, \theta^{i}{}'\in \Theta^i\),  
+    \begin{align}\label{eq: NearMPGDef}
+        |(\Phi(\mathbf{x}, \theta^i, \theta^{-i})-\Phi(\mathbf{x}, \theta^i{}', \theta^{-i}) ) - (V^i(\mathbf{x}, \theta^i, \theta^{-i})-V^i(\mathbf{x}, \theta^i{}', \theta^{-i}) )| \leq \kappa.  
+    \end{align}
+\end{definition}
+This definition intuitively requires that for any agent, the change in its value function resulting from a unilateral adjustment to its policy parameter can be closely approximated by the corresponding change in the dynamic \(\alpha\)-potential function. This property allows us to approximate the Nash equilibrium as an optimizer of the near-potential function (as proved in the supplementary material). 
+
+\vspace{-1mm}
+\begin{proposition}\label{prop: NE_def_PotMax}
+    Given an $\alpha$-potential function $\Phi$, for any $\mathbf{x} \in \mathcal{X}$, $\lambda > 0$, and any policy $\theta^\ast$ satisfying
+\(
+\Phi(\mathbf{x}, \theta^\ast) \geq \max_{\theta \in \Theta} \Phi(\mathbf{x}, \theta) - \lambda,\)
+the policy $\theta^\ast$ constitutes a $(\lambda + \alpha)$-approximate Nash equilibrium.
+\end{proposition}
+
+\vspace{-7mm}
+\subsection{Computational Approach}
+\vspace{-1mm}
+Our approach for real-time approximation of Nash equilibrium relies on two phases: offline and online. In the offline phase, we learn an \(\alpha\)-potential function using simulated game data. In the online phase, the ego vehicle updates its policy parameters by optimizing the potential function. 
+
+ \vspace{1mm}
+ \noindent \underline{\textbf{Offline Phase:}} 
+    We parameterize the potential function through using a feed-forward neural network with ReLU activation and a BatchNorm layer added at the beginning. More concretely, we define the parametrized potential function as \(\Phi(\cdot;\phi): \mc{X} \times A \rightarrow \mathbb{R}\), where \(\phi\) denotes the weights of neural network. Using Definition \ref{def: NearPotentialFunction}, we cast the problem of learning potential function as a semi-infinite program as shown below: 
+\begin{align} 
+    \min_{\substack{ y, \phi}}\quad  &  y\label{eq: LinearSemiInfiniteFormulation}\\ 
+    \text{s.t.}\quad &  \Big| (\Phi(\mathbf{x}, \theta^i,\theta^{-i}; \phi) -\Phi(\mathbf{x},\theta^i{}',\theta^{-i}; \phi)) - (V^i(\mathbf{x},\theta^i,\theta^{-i};\upsilon) -V^i(\mathbf{x},\theta^i{}',\theta^{-i};\upsilon)) \Big| \leq y, \notag \\  &\quad ~\forall i \in I, ~ \forall \theta^i, \theta^i{}' \in \Theta^i, ~ \forall \theta^{-i}\in \Theta^{-i}, \mathbf{x}\in\mc{X}, \notag 
+\end{align}
+where we use a neural network (same architecture as potential function), with parameters \(\upsilon\), to estimate the value function \(V^i\) for every \(i\in \mc{N}\). Let \(\phi^\ast\) be a solution of the above optimization problem. 
+The main challenge with solving \eqref{eq: LinearSemiInfiniteFormulation} is that the there are un-countably many constraints, one constraint corresponding to each value of initial state and policy parameter. Therefore, we numerically solve \eqref{eq: LinearSemiInfiniteFormulation} by using  simulated game data with randomly chosen starting position and policy parameters. Details of simulated game are discussed in next section.  
+
+\vspace{1mm}
+\noindent \underline{\textbf{Online Phase:}} Leveraging Proposition \ref{prop: NE_def_PotMax}, the ego vehicle optimizes the learned potential function, i.e. \(\Phi(\cdot, \phi^\ast)\), to approximate the Nash equilibrium policy parameter. More formally, given the current state \(\mathbf{x}_t\), the ego vehicle computes 
+\(
+    \theta^\ast \in \arg\max_{\theta\in\Theta}\Phi(\mathbf{x}_t, \theta;\phi^\ast),
+\)
+using a non-linear optimization solver. 
+Using \(\theta^\ast\), the ego vehicle takes action \(\mathbf{u}_t^i = \pi^i(\mathbf{x}_t; \theta^{\ast, i})\). 
+
+ 
+% \begin{align*}
+%     \textsf{Regret} =  \max_{i\in [N]}|\max_{ \theta_i} V_i(x,\theta_{i}',\theta^\ast_{-i}) - V_i(x,\theta^\ast_i,\theta^\ast_{-i}) |
+% \end{align*}

@@ -1,0 +1,646 @@
+% alpha-PLAYER draft: abstract and Sections 1--5.
+% The jmlr pmlr option is the underlying format of the L4DC template.
+% References are embedded so the source works in the standalone native editor.
+% Replace submission metadata and author information for the final submission.
+% Draft modeling choices pending confirmation:
+%   singles (two strategic players); stochastic high-level policies;
+%   five symbolic return targets; three symbolic preparation configurations;
+%   discounted point-outcome utility and fixed low-level execution controllers.
+% Method choices drafted here: compact probability-vector parameters for the
+% potential solver; categorical PPO self-play with a frozen opponent pool.
+% Experimental measurements and implementation hyperparameters remain pending.
+% No empirical superiority, measured correlation, or numerical results are asserted.
+\documentclass[pmlr]{jmlr}
+\usepackage{times}
+\usepackage{amsmath,amssymb,booktabs}
+
+\title[$\alpha$-PLAYER: Game-Theoretic Robot Table Tennis]{
+  $\alpha$-PLAYER: An Attacker--Defender Framework for
+  Game-Theoretic Planning and Learning in Robot Table Tennis}
+\author{\Name{Anonymous Authors}}
+\jmlryear{2027}
+\jmlrvolume{--}
+\jmlrworkshop{Learning for Dynamics and Control}
+\editors{}
+
+\newcommand{\Players}{\mathcal{N}}
+\newcommand{\States}{\mathcal{X}}
+\newcommand{\Actions}{\mathcal{A}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\attack}{\mathrm{A}}
+\newcommand{\defend}{\mathrm{D}}
+\newcommand{\TBD}{\textit{TBD}}
+\newcommand{\draftresult}[1]{\par\noindent\textit{Results to add: #1}\par}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Competitive robot table tennis extends beyond the challenge of controlling a robot at its physical limits. Like human players, robots must choose where to return the ball and how to prepare for the opponent's next shot to gain a strategic advantage. Despite recent advances in robot table tennis, research on equilibrium-aware planning for competitive play remains limited. We propose an algorithmic framework for computing approximate Nash equilibrium strategies by adapting dynamic $\alpha$-potential functions to robot table tennis. Our approach comprises offline and online phases. During the offline phase, simulated game data are used to learn a potential function that approximates changes in each player's long-term utility under unilateral policy deviations. During the online phase, this function is optimized to select competitive policy parameters, with equilibrium approximation governed by the potential approximation and optimization errors. To support this approach, we introduce a table tennis environment organized around an attacker--defender game: the attacker returns the ball, the defender prepares to receive it, and the roles switch after each successful return. Policies select among five return targets and three defensive preparation positions. We also formulate self-play reinforcement learning over the same strategic choices. We evaluate both approaches and relevant baselines using robots with a high number of degrees of freedom in MuJoCo, and compare their strategic behavior with patterns extracted from videos of human table tennis. The resulting framework supports both the development of competitive robotic algorithms and the analysis of expert play.
+\end{abstract}
+
+\begin{keywords}
+Robot Table Tennis, Dynamic Games, Attacker--Defender Games,
+Nash Equilibrium, $\alpha$-Potential Functions, Self-Play Reinforcement Learning.
+\end{keywords}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Table tennis provides a demanding setting for studying learning and control in interactive physical systems. A robot must estimate a moving ball, coordinate a rapid racket motion, and execute a legal return under its actuation and workspace constraints. Recent systems demonstrate substantial progress in competitive play against humans \citep{dambrosio2024competitive,durr2026ace}, while humanoid systems show that table tennis can be integrated with coordinated whole-body motion \citep{su2025hitter}. These advances make it possible to study a further question: how should a physically capable robot choose its actions when its opponent is also making strategic decisions?
+
+Winning a rally depends on more than the accuracy of an individual return. A player may direct the ball toward an exposed part of the opponent's court, induce a difficult recovery motion, or vary shot placement to avoid becoming predictable. At the same time, that player must recover to a position from which it can respond to the next shot. A return that immediately challenges the opponent may also leave the player poorly prepared for a counterattack. Consequently, shot placement and defensive preparation are coupled across successive exchanges. Treating the opponent only as a source of incoming trajectories does not capture this reciprocal dependence.
+
+Game theory provides a framework for reasoning about such interactions. A Nash equilibrium describes a strategy profile for which no player can improve its expected utility through a unilateral change. In robot table tennis, this concept connects the choice of return targets with the opponent's preparation strategy and the continuation of the rally. However, computing equilibrium strategies directly in the space of high-dimensional robot controls is difficult: both players influence ball motion, robot configurations persist between shots, and the consequences of an action extend beyond the next contact.
+
+We address these challenges through a table tennis game organized around alternating attacker and defender roles. During an exchange, the attacker is the player responsible for producing the next return; the defender is the opponent preparing to receive that return. After a successful return, their roles switch. This decomposition provides a common interface between strategic decisions and physical execution. It also exposes a compact set of interpretable choices: five locations at which to return the ball and three positions from which to prepare for the next incoming shot. The underlying robot controllers continue to react to the physical state while executing these choices.
+
+Our equilibrium approximation approach builds on the dynamic $\alpha$-potential framework and its application to autonomous racing in $\alpha$-RACER \citep{guo2023markov,guo2024dynamic,kalaria2025racer}. Rather than repeatedly solving coupled robot-control problems online, we learn a scalar function from simulated interactions and optimize it over policy parameters. The learning objective relates changes in this function to changes in individual players' long-term utilities. We additionally study self-play reinforcement learning through the same attacker--defender interface, providing a complementary route to learning competitive strategies. This comparison separates the strategic formulation from the particular algorithm used to solve it.
+
+We highlight three main contributions:
+
+\paragraph{1. Modeling and environment contribution.}
+We introduce a robot table tennis environment for evaluating game-theoretic algorithms with an explicit attacker--defender decomposition. The environment couples alternating strategic roles with ball dynamics, racket contacts, robot motion, and point outcomes. We define policies over five return targets and three defensive preparation positions, retaining the consequences of those choices across exchanges. The environment is instantiated in MuJoCo with robots possessing a high number of degrees of freedom \citep{todorov2012mujoco}. This formulation provides a shared basis for implementing and comparing competitive planning and learning algorithms.
+
+\paragraph{2. Algorithmic and comparative contribution.}
+We propose an adaptation of $\alpha$-potential learning for approximate Nash equilibrium computation in the table tennis game. Offline interaction data are used to estimate long-term utilities and learn a function that approximates their changes under unilateral policy deviations. Online optimization of the learned function then produces candidate equilibrium policy parameters. The approximation claim is expressed in terms of potential accuracy and optimization error; the table tennis formulation itself does not imply that these errors are small. Alongside this approach, we develop self-play reinforcement learning using the same strategic action interface and physical execution model. We compare both proposed approaches with relevant baselines under common observations, objectives, and evaluation conditions.
+
+\paragraph{3. Human-play analysis contribution.}
+We compare the strategies produced by the proposed approaches with behavior extracted from videos of human table tennis. Expressing human shot placement and preparation behavior in the same strategic representation enables analysis of target preferences, responses to opponent positioning, and patterns across successive exchanges. This comparison examines where computed strategies agree with expert behavior and where they differ. It also makes the environment useful for studying candidate improvements to expert play under an explicit model of physical capabilities and competition.
+
+Beyond their use as benchmarks, game-theoretic environments make strategic assumptions explicit and allow alternative algorithms to be studied within a common problem. For table tennis, they can also connect questions about optimal play to observable human decisions. Equilibrium analysis identifies strategies that resist unilateral exploitation within the modeled policy space, while human data reveal how experts navigate similar tradeoffs in practice. Their comparison can inform robot design and expert analysis without assuming that human players follow an exact equilibrium or that a simulated robot has human physical capabilities.
+
+\paragraph{Organization.}
+Section~\ref{sec:related} reviews related work in robot table tennis, competitive robotic games, equilibrium approximation, and human-play analysis. Section~\ref{sec:model} introduces the dynamic-game preliminaries and the attacker--defender formulation. Section~\ref{sec:approximation} presents potential-based equilibrium approximation and self-play reinforcement learning. Section~\ref{sec:results} compares competitive performance, examines data and horizon choices, and analyzes correspondence with human play.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Robot table tennis control and competitive play.}
+Robot table tennis has been studied through both structured control and learned policies. \citet{li2015landing} examine the designation and control of landing points for competitive returns, illustrating the strategic importance of ball placement. \citet{gao2020modelfree} learn joint-level return policies using model-free learning and demonstrate forehand and backhand behaviors. More recent work combines skill execution with higher-level decision making: \citet{dambrosio2024competitive} use a hierarchical controller and online opponent adaptation for competitive matches against human players. \citet{durr2026ace} integrate high-speed perception, model-free reinforcement learning, and specialized hardware to compete with elite players. For humanoid robots, HITTER combines trajectory planning with a learned whole-body controller \citep{su2025hitter}. These systems establish the importance of both physical capability and strategy. Our focus is the explicit equilibrium formulation of target selection and preparation across a rally, using high-dimensional robot execution within a common environment.
+
+\paragraph{Opponent modeling, preparation, and table tennis self-play.}
+There are direct precedents for strategic modeling in table tennis. \citet{wang2011safe} study the tradeoff between exploiting an opponent and preserving a minimax guarantee, including a robot table tennis application with forehand, middle, and backhand preparation poses. \citet{wang2017anticipation} formulate anticipatory action selection as a partially observable Markov decision process and account for uncertainty in the opponent's intended return. \citet{mahjourian2018hierarchical} develop a hierarchy of striking, positioning, and robot-control skills, and learn cooperative and adversarial strategies through self-play. Their strategic actions include both striking targets and waiting positions. These works make clear that opponent-aware preparation, target-based actions, and table tennis self-play are established ideas. We build on them by defining an alternating-role dynamic game with a common finite strategic interface, studying $\alpha$-potential equilibrium approximation alongside self-play, and comparing the resulting strategies with human play.
+
+\paragraph{Game-theoretic planning in competitive robotics.}
+Autonomous racing provides a closely related example of strategic planning subject to physical constraints. \citet{wang2019racing} formulate competitive vehicle planning through game-theoretic interaction, and \citet{spica2020drone} use sensitivity-enhanced iterated best response for two-player drone racing. Iterative linear-quadratic games provide another route to planning with nonlinear, interacting agents \citep{fridovich2020ilqgames}. For constrained racing games, \citet{zhu2024sqp} develop a sequential quadratic programming method for local open-loop generalized Nash equilibria. Hierarchical racing controllers also combine discrete tactical reasoning with either reinforcement learning or a linear-quadratic Nash game \citep{thakkar2024hierarchical}. These approaches motivate the separation of interpretable strategic choices from detailed physical execution. Table tennis adds repeated impacts and alternating roles: a player must choose a return while its opponent prepares for the resulting incoming ball.
+
+\paragraph{Potential functions and equilibrium approximation.}
+Potential-game structure can replace coupled optimization problems with optimization of a single function. Potential iLQR applies this idea to interactive trajectory planning \citep{kavuncu2021potential}, while RAPID formulates multi-agent racing as a constrained dynamic potential game \citep{jia2023rapid}. Dynamic $\alpha$-potential functions relax exact agreement between unilateral utility changes and potential changes \citep{guo2023markov,guo2024dynamic}. $\alpha$-RACER learns such a function offline and optimizes it online over a parameterized racing-policy family \citep{kalaria2025racer}. We adapt this approach to shot placement and defensive preparation. Unlike an exact potential formulation, the proposed approximation must be assessed for the table tennis utilities and admissible policy deviations; competitive point outcomes alone do not establish a useful potential approximation.
+
+\paragraph{Self-play and game-theoretic learning in other games.}
+Self-play has produced strong policies in board games, including chess, shogi, and Go \citep{silver2018alphazero}. Equilibrium-oriented learning also appears in imperfect-information games: neural fictitious self-play combines reinforcement learning with average-strategy learning \citep{heinrich2016nfsp}, and policy-space response oracles train approximate responses to mixtures of policies and solve an empirical game over the resulting population \citep{lanctot2017psro}. These methods motivate the use of strategy mixtures and evaluation against diverse opponents. They also distinguish competitive performance from equilibrium quality: winning against selected opponents does not, by itself, measure the gain available to a best response. Our table tennis environment supports comparisons using a shared physical model and strategic interface.
+
+\paragraph{Human strategy and video-based analysis.}
+\citet{muelling2014strategies} infer strategic preferences from human table tennis demonstrations using inverse reinforcement learning, including preferences over regions of the opponent's court. TTNet provides ball detection, event spotting, and semantic segmentation for table tennis video, together with the OpenTTGames dataset \citep{voeikov2020ttnet}. LATTE-MV reconstructs table tennis play from monocular videos and uses these data for uncertainty-aware anticipation of opponent actions \citep{etaat2025latte}. These studies support the use of human observations to study strategic decisions and perception. Our human-play comparison instead asks how observed placement and preparation behavior relate to strategies produced by equilibrium approximation and self-play within the same attacker--defender representation.
+
+\section{Modeling Multi-player Robot Table Tennis}
+\label{sec:model}
+
+We first introduce the dynamic-game notation, following the policy-parameter perspective used in $\alpha$-RACER \citep{kalaria2025racer}. We then instantiate the game for robot table tennis. The notation permits multiple strategic players; the attacker--defender environment developed here concerns singles table tennis, with two players. Extending the formulation to doubles would additionally require team utilities and a rule for which team member returns each shot.
+
+\subsection{Preliminaries on Dynamic Game Theory}
+\label{sec:preliminaries}
+
+Consider a dynamic game with player set $\Players=\{1,\ldots,N\}$. At strategic decision epoch $t\in\{0,1,\ldots\}$, the joint state is $x_t\in\States$. Player $i$ chooses an action $a_t^i\in\Actions^i(x_t)$, and the joint action is $a_t=(a_t^i)_{i\in\Players}$. The state evolves according to a transition kernel
+\begin{equation}
+  x_{t+1}\sim P(\cdot\mid x_t,a_t),
+  \label{eq:transition}
+\end{equation}
+which includes the physical execution of the selected actions. Player $i$ receives a bounded utility $r^i(x_t,a_t,x_{t+1})$. A stationary state-feedback policy $\pi^i(\cdot\mid x;\theta^i)$ maps the state to a distribution over actions, where $\theta^i\in\Theta^i$ parameterizes an admissible policy family. Write $\Theta=\prod_{i\in\Players}\Theta^i$, $\theta=(\theta^i)_{i\in\Players}$, and $\theta^{-i}$ for the parameters of every player except $i$.
+
+For discount factor $\gamma\in[0,1)$, the value of player $i$ from initial state $x$ is
+\begin{equation}
+  V^i(x,\theta^i,\theta^{-i})=
+  \E_{\theta}\!\left[\sum_{t=0}^{\infty}
+  \gamma^t r^i(x_t,a_t,x_{t+1})\,\middle|\,x_0=x\right].
+  \label{eq:value}
+\end{equation}
+The expectation accounts for policy randomization and transition uncertainty. The policy parameters in this definition are fixed throughout the evaluated continuation of the game; the policies themselves remain state dependent. A terminal state is absorbing and has zero subsequent utility, so a finite rally is included in this notation.
+
+\begin{definition}[$\epsilon$-Nash equilibrium at an initial state]
+For $x\in\States$ and $\epsilon\geq0$, a joint policy parameter $\theta^*\in\Theta$ is an $\epsilon$-Nash equilibrium at $x$ if
+\begin{equation}
+  V^i(x,\theta^{*,i},\theta^{*,-i})
+  \geq V^i(x,\theta^i,\theta^{*,-i})-\epsilon,
+  \quad \forall i\in\Players,\ \forall\theta^i\in\Theta^i.
+  \label{eq:nash}
+\end{equation}
+When $\epsilon=0$, the profile is a Nash equilibrium at $x$.
+\end{definition}
+
+If Equation~\eqref{eq:nash} holds for every admissible initial state, the profile is a stationary $\epsilon$-Nash equilibrium over those states. Throughout, deviations are taken within the specified policy families. Thus, equilibrium quality concerns the modeled strategic choices and their execution, rather than every possible joint-level robot policy.
+
+\subsection{Robot Table Tennis as an Attacker--Defender Game}
+\label{sec:game}
+
+\paragraph{Players and strategic roles.}
+For singles table tennis, $\Players=\{1,2\}$. The attacker and defender are roles assigned to these players, rather than additional players. Let $\iota_t\in\Players$ denote the attacker during exchange $t$, and let $\jmath_t=3-\iota_t$ denote the defender. The attacker receives the currently incoming ball and is responsible for producing the next return. The defender, having produced the preceding shot, prepares to receive the attacker's forthcoming return. The terms refer to these responsibilities even when a shot is tactically conservative.
+
+\paragraph{Exchange timing and role switching.}
+An exchange begins after the preceding racket contact, when the current attacker has an incoming ball to return. During this interval, the attacker selects a return target and executes the return, while the defender selects and moves toward a preparation position. After the attacker produces a successful return and the rally continues, the next exchange has
+\begin{equation}
+  (\iota_{t+1},\jmath_{t+1})=(\jmath_t,\iota_t).
+  \label{eq:roles}
+\end{equation}
+The previous defender now receives the ball and becomes the attacker; the previous attacker recovers as the defender. An invalid incoming shot or a failed return terminates the rally and assigns its point outcome. The initialization specifies the first incoming ball and the corresponding attacker, allowing rally strategy to be studied without prescribing a separate serving controller. Strategic epochs therefore index exchanges, while the simulator and robot controllers execute at finer physical time steps.
+
+\paragraph{Joint state.}
+The state includes the variables needed to predict the consequences of both players' choices:
+\begin{equation}
+  x_t=\bigl(b_t,z_t^1,z_t^2,\iota_t,\ell_t\bigr),
+  \qquad
+  b_t=(p_t^b,v_t^b,\omega_t^b).
+  \label{eq:state}
+\end{equation}
+Here $p_t^b,v_t^b,\omega_t^b\in\R^3$ are the ball position, linear velocity, and angular velocity. The robot state $z_t^i$ contains its generalized configuration and velocity, together with any actuator or execution-controller state required for a Markov description. Racket poses follow from the robot kinematics. The discrete variable $\ell_t$ records rally status, including the last contact, bounce information, and terminal outcome. Keeping both robot states in $x_t$ preserves the effect of previous recovery and preparation motions on future returns.
+
+\paragraph{Strategic actions and information.}
+Let $\mathcal{K}=\{1,\ldots,5\}$ index return targets and $\mathcal{M}=\{1,2,3\}$ index preparation positions. At exchange $t$, the attacker selects $k_t\in\mathcal{K}$ and the defender selects $m_t\in\mathcal{M}$, giving joint strategic action $(k_t,m_t)$. Equivalently,
+\begin{equation}
+  \Actions^i(x_t)=
+  \begin{cases}
+    \mathcal{K}, & i=\iota_t,\\
+    \mathcal{M}, & i=\jmath_t.
+  \end{cases}
+  \label{eq:actions}
+\end{equation}
+what my code does is - every player's actual action set, every exchange, is the full product $\mathcal{K}\times\mathcal{M}$ — never role-gated down to just one factor. Or are we talking about Kexin's design that alternating attacker/defender here?
+Both choices use the physical state available at the exchange boundary. The defender does not receive the attacker's newly selected target before choosing its preparation action. Subsequent low-level control can react to observed ball motion. This timing models preparation under uncertainty about the next shot, rather than granting the defender advance knowledge of its destination.
+
+\paragraph{Physical execution and transition dynamics.}
+Fixed execution controllers translate strategic targets into state-feedback robot commands. An attack controller $\kappa^{\attack,i}$ attempts to return the incoming ball toward the selected landing target; a preparation controller $\kappa^{\defend,i}$ moves the robot toward the selected ready configuration. MuJoCo advances the robot and ball dynamics, including the modeled table, net, and racket interactions \citep{todorov2012mujoco}. Together, the execution controllers and simulation define
+\begin{equation}
+  x_{t+1}\sim P_{\mathrm{TT}}(\cdot\mid x_t,k_t,m_t).
+  \label{eq:ttkernel}
+\end{equation}
+The selected target is a command, not a guaranteed physical outcome. Actuation limits, incoming-ball conditions, and execution error can lead to a different landing point or a failed return. The transition therefore retains the physical difficulty of realizing a strategically desirable shot.
+
+\paragraph{Utility and continuation.}
+For a point-based competitive objective, define
+\begin{equation}
+  r^i(x_t,a_t,x_{t+1})=
+  \ind\{\text{player }i\text{ wins the point on this transition}\}
+  -\ind\{\text{player }i\text{ loses the point on this transition}\}.
+  \label{eq:reward}
+\end{equation}
+The utility is zero while the rally continues, and $r^1=-r^2$ for a resolved point. Equation~\eqref{eq:value} then values the discounted point outcome over the continuation of the rally. A discount below one gives greater weight to earlier outcomes; it is a modeling choice rather than the official scoring rule. The competitive objective rewards winning points, while legal return execution and preparation enter through the transition dynamics. A specific reward-shaping scheme, if used for training, must be distinguished from this evaluation utility.
+
+\paragraph{Policy parameterization.}
+Each player has an attack component and a defense component, $\theta^i=(\theta^{\attack,i},\theta^{\defend,i})$. Their state-feedback distributions are
+\begin{equation}
+  p^{\attack,i}(x;\theta^{\attack,i})\in\Delta_5,
+  \qquad
+  p^{\defend,i}(x;\theta^{\defend,i})\in\Delta_3,
+  \label{eq:policycomponents}
+\end{equation}
+where $\Delta_d=\{p\in\R_{\geq0}^d:\sum_{j=1}^d p_j=1\}$. The active distribution is determined by the player's current role. Deterministic choices are included as vertices of these simplexes, while stochastic choices permit a player to vary its behavior. A complete strategy specifies both components because each player repeatedly occupies both roles. The same target sets, preparation sets, and execution controllers provide the action interface for potential-based planning and self-play reinforcement learning.
+
+\subsection{Attacker's Options: Five Return Targets}
+\label{sec:attacker}
+
+For attacker $i$, let $\mathcal{T}^{-i}\subset\R^2$ denote the opponent's half of the tabletop in a table-fixed coordinate frame. Define five distinct return targets
+\begin{equation}
+  \mathcal{C}^i=\{c_1^i,c_2^i,c_3^i,c_4^i,c_5^i\},
+  \qquad c_k^i\in\operatorname{int}(\mathcal{T}^{-i}).
+  \label{eq:targets}
+\end{equation}
+Each target specifies the desired location of the returned ball's first tabletop bounce on the opponent's side. The five coordinates are environment parameters, expressed in the same convention for each player. Choosing $k_t$ invokes the return controller with desired landing location $c_{k_t}^i$.
+
+The attacker observes the incoming-ball state and both players' physical configurations. Its decision balances the chance of executing a legal return against the difficulty that the chosen placement creates for the opponent and the ensuing continuation of the rally. A target may be attractive because it requires a long recovery motion or exploits a preparation position that covers another region. Such advantages depend on the current state and the opponent's strategy; no target is assigned a fixed intrinsic preference by the game formulation.
+
+The attack policy is
+\begin{equation}
+  \Pr(k_t=k\mid x_t,\iota_t=i)
+  =p_k^{\attack,i}(x_t;\theta^{\attack,i}),
+  \quad k\in\mathcal{K}.
+  \label{eq:attackpolicy}
+\end{equation}
+This action interface makes landing placement the attacker's strategic choice. Strike timing, racket orientation, ball speed, and spin are handled by the execution controller and physical model; they are not additional independently selected high-level actions in the present formulation. The realized ball state nevertheless determines the difficulty of the opponent's next return.
+
+\subsection{Defender's Options: Three Preparation Positions}
+\label{sec:defender}
+
+For defender $i$, define three preparation configurations
+\begin{equation}
+  \mathcal{D}^i=\{d_1^i,d_2^i,d_3^i\}.
+  \label{eq:preparation}
+\end{equation}
+Each $d_m^i$ is a physically admissible ready configuration that specifies a preparation position and its associated racket pose. For a mobile robot it may include base positioning; for a robot with a fixed base it specifies an arm and racket configuration. The three configurations are fixed environment parameters and are shared across the compared strategic algorithms. Selecting $m_t$ commands movement toward $d_{m_t}^i$ during the opponent's return phase.
+
+Preparation affects the set of incoming balls that the robot can subsequently reach and the time available to execute its next return. A position that covers one region well may expose another, so its utility depends on the attacker's target distribution and the current ball and robot states. The preparation command does not assume instantaneous movement: the actual configuration reached before the next shot is determined by the robot dynamics and execution controller.
+
+The defense policy is
+\begin{equation}
+  \Pr(m_t=m\mid x_t,\jmath_t=i)
+  =p_m^{\defend,i}(x_t;\theta^{\defend,i}),
+  \quad m\in\mathcal{M}.
+  \label{eq:defensepolicy}
+\end{equation}
+The defender chooses this preparation without access to the attacker's new target selection. Once the opponent's return is observed and the roles switch, the same player becomes the attacker and selects its own return target from the resulting state. Its preparation decision therefore influences both its ability to survive the incoming shot and the strategic opportunities available on its next attack.
+
+\section{Approximating Multi-agent Interaction}
+\label{sec:approximation}
+
+We develop two approaches to strategic play in the attacker--defender game: approximate equilibrium computation through a learned $\alpha$-potential function, and policy learning through self-play reinforcement learning. Both use the five return targets and three preparation positions defined in Section~\ref{sec:model}, with the same physical execution controllers. Their competitive performance and the gains available to unilateral deviations are evaluated separately.
+
+\subsection{$\alpha$-Potential Function: Offline Learning and Online Optimization}
+\label{sec:potential}
+
+Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024dynamic,kalaria2025racer}, we seek a scalar function that tracks the effect of changing one player's strategy. For compact potential-based optimization, instantiate the policy family with
+\begin{equation}
+  \theta^i=(w^{\attack,i},w^{\defend,i})\in\Delta_5\times\Delta_3.
+  \label{eq:compacttheta}
+\end{equation}
+The vectors specify probabilities of selecting attack targets and preparation positions. During a continuation rollout they are held fixed, while the execution controllers react to the physical state. Thus, this is a particular instance of Equation~\eqref{eq:policycomponents}, with eight probability entries and six independent parameters per player. The online solver can update these vectors when a new exchange state is observed.
+
+\begin{definition}[Dynamic $\alpha$-potential function]
+A function $\Phi:\States\times\Theta\to\R$ is an $\alpha$-potential function for the chosen policy family if, for every $x\in\States$, $i\in\Players$, $\theta\in\Theta$, and alternative $\theta^{i\prime}\in\Theta^i$,
+\begin{equation}
+\begin{split}
+  \big|&\Phi(x,\theta)-\Phi(x,\theta^{i\prime},\theta^{-i})\\
+       &-\big[V^i(x,\theta)-V^i(x,\theta^{i\prime},\theta^{-i})\big]\big|
+  \leq\alpha.
+\end{split}
+  \label{eq:alphapotential}
+\end{equation}
+\end{definition}
+
+The function approximates unilateral value changes, rather than the sum of the players' rewards. In particular, the zero-sum point utility does not imply an exact potential or a small value of $\alpha$.
+
+\begin{proposition}[Equilibrium approximation]
+Suppose $\Phi$ satisfies Equation~\eqref{eq:alphapotential}. For a given state $x$, if
+\begin{equation}
+  \Phi(x,\theta^*)\geq\sup_{\theta\in\Theta}\Phi(x,\theta)-\lambda,
+  \label{eq:potentialopt}
+\end{equation}
+then $\theta^*$ is an $(\alpha+\lambda)$-Nash equilibrium at $x$ within the chosen policy family.
+\label{prop:potential}
+\end{proposition}
+\begin{proof}
+For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alphapotential} gives
+\begin{align*}
+ V^i(x,\theta^i,\theta^{*,-i})-V^i(x,\theta^*)
+ &\leq\Phi(x,\theta^i,\theta^{*,-i})-\Phi(x,\theta^*)+\alpha\\
+ &\leq\lambda+\alpha.
+\end{align*}
+The second inequality follows from Equation~\eqref{eq:potentialopt}.
+\end{proof}
+
+\paragraph{Offline phase: value estimation.}
+Generate simulated continuations from diverse exchange states and joint strategy parameters. Include deterministic choices as well as mixed strategies so that the data cover both the fifteen fixed target--preparation pairings and randomized play. For continuation length $H$, each rollout provides
+\begin{equation}
+  G_H^i=\sum_{h=0}^{H-1}\gamma^h
+  r^i(x_h,a_h,x_{h+1}),
+  \label{eq:rolloutreturn}
+\end{equation}
+with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. Fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. Split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
+
+\paragraph{Offline phase: potential learning.}
+Represent $\Phi_\varphi(x,\theta)$ with a feed-forward neural network. Construct unilateral-deviation samples $\mathcal{S}$ whose entries are $(x,i,\theta,\theta^{i\prime})$, and define
+\begin{equation}
+\begin{split}
+ e_\varphi=&\ \Phi_\varphi(x,\theta)
+       -\Phi_\varphi(x,\theta^{i\prime},\theta^{-i})\\
+       &-\big[\widehat V^i_{\nu_i}(x,\theta)
+       -\widehat V^i_{\nu_i}(x,\theta^{i\prime},\theta^{-i})\big].
+\end{split}
+ \label{eq:potentialresidual}
+\end{equation}
+Learn the network by minimizing the largest sampled discrepancy:
+\begin{equation}
+  \min_{\varphi,y\geq0}\ y
+  \quad\text{subject to}\quad
+  |e_\varphi|\leq y\quad\text{for every sample in }\mathcal{S}.
+  \label{eq:potentialtraining}
+\end{equation}
+This finite-sample objective approximates the uniform requirement in Equation~\eqref{eq:alphapotential}. If the discrepancy bound were uniform and the value estimators had uniform error at most $\beta$, the learned function would have true approximation error at most $y+2\beta$. Training and held-out residuals alone do not certify these uniform bounds; the results therefore also examine value-estimation error and unilateral improvement in simulation.
+
+\paragraph{Online phase.}
+Given exchange state $x_t$, optimize the learned function over the joint probability vectors:
+\begin{equation}
+  \widehat\theta_t\approx
+  \operatorname*{arg\,max}_{\theta\in\Theta}\Phi_\varphi(x_t,\theta).
+  \label{eq:onlinepotential}
+\end{equation}
+Use projected gradient ascent onto the probability simplexes, initialized from the preceding solution, with additional initializations to assess sensitivity to local optima. Each player samples from the component corresponding to its current role and passes the selected target to its execution controller. When evaluating an ego policy against a baseline, the opponent retains its baseline policy. Proposition~\ref{prop:potential} is conditional on the potential error and the gap to a global maximum; local optimization does not establish that gap. It concerns fixed-parameter continuations at the evaluated state. The feedback policy obtained by repeatedly optimizing at successive exchanges is assessed separately through best-response tests.
+
+\subsection{Self-Play Reinforcement Learning}
+\label{sec:selfplay}
+
+We also learn strategic policies by self-play, building on hierarchical table tennis learning \citep{mahjourian2018hierarchical}. For player $i$, a neural actor with parameters $\psi_i$ maps the exchange state and current role to two categorical distributions,
+\begin{equation}
+  p_{\psi_i}^{\attack}(\cdot\mid x_t)\in\Delta_5,
+  \qquad p_{\psi_i}^{\defend}(\cdot\mid x_t)\in\Delta_3.
+  \label{eq:rlheads}
+\end{equation}
+Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. Unlike the compact continuation mixtures in Equation~\eqref{eq:compacttheta}, this policy can condition its strategic probabilities on each new state; this difference in policy representation is included when interpreting comparisons.
+
+\paragraph{Training objective and opponent updates.}
+Train each player to maximize its discounted point utility using proximal policy optimization (PPO) 
+Are we just using REINFORCE with Baseline here instead of PPO?
+\citep{schulman2017ppo}. Alternate learner updates while holding the opponent fixed within an update round. Maintain a pool of frozen opponent snapshots and sample an opponent at the beginning of each rally, retaining that snapshot for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. An unfinished training rollout is bootstrapped from its critic rather than treated as a lost point.
+
+\paragraph{Evaluation and equilibrium interpretation.}
+Freeze the trained actor parameters and evaluate both sampled categorical actions and deterministic argmax actions. Self-play policies are candidate equilibrium strategies: PPO and opponent-pool training do not by themselves guarantee convergence to Nash equilibrium. We quantify the gain available to a separately trained response against each frozen policy and compare competitive outcomes against the same opponents used for potential-based planning. This evaluates both resistance to exploitation and practical performance without identifying self-play win rate with an equilibrium certificate.
+
+\section{Results}
+\label{sec:results}
+
+Our evaluation addresses three questions: \textbf{(Q1)} How do potential-based approximate equilibrium policies and self-play policies compare with fifteen static strategies, a random strategy, and iterated best response? \textbf{(Q2)} How do training-data volume, planning horizon, and stochasticity influence performance? \textbf{(Q3)} Do the learned strategies exhibit conditional shot-placement patterns similar to those observed in human table tennis?
+
+\paragraph{Experimental setup.}
+Use the MuJoCo environment and common execution controllers from Section~\ref{sec:model}. Evaluate independently trained seeds on held-out rally initializations, balancing table sides and initial roles. All methods use the same physical parameters, target geometry, preparation configurations, and point-scoring rules. Report completed-point win rates alongside discounted utility, legal-return rate, rally length, and strategic computation time. Treat unresolved evaluation cutoffs separately from point losses, and report their frequency. Confidence intervals account for independent training seeds and rally sampling. \textit{Implementation details to add: robot model and degree-of-freedom count, target and preparation coordinates, dataset sizes, horizons, discount factors, network architectures, optimization budgets, training seeds, and evaluation rally counts.}
+
+\subsection{Competitive Performance and Equilibrium Quality}
+\label{sec:resultsperformance}
+
+\paragraph{Baselines.}
+The static family contains every combination of a fixed attack target and a fixed preparation position:
+\begin{equation}
+  \mathcal{B}_{\mathrm{static}}=
+  \{\pi^{(k,m)}:k\in\mathcal{K},\ m\in\mathcal{M}\},
+  \qquad |\mathcal{B}_{\mathrm{static}}|=5\times3=15.
+  \label{eq:staticbaselines}
+\end{equation}
+For example, one strategy always returns toward the left-deep target when attacking and always selects the left preparation position when defending. Each pairing defines a complete policy that alternates roles. The random baseline independently samples uniformly among the five attack targets and among the three preparation positions at each relevant decision.
+
+Iterated best response (IBR) alternates updates of each player's attack and defense parameters against the other's current strategy \citep{spica2020drone}. At a given state, use simulated returns over horizon $H_{\mathrm{IBR}}$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}. Report the number of response rounds, initialization, rollout budget, and runtime; finite rounds or local response optimization need not yield an equilibrium. Compare equal online computation budgets as well as the quality obtained with a larger offline response-search budget. Finally, compare the two proposed methods directly.
+
+\paragraph{Competitive outcomes.}
+Evaluate each proposed method against all fifteen static pairings, the random baseline, IBR, and the other proposed method. Report the complete $5\times3$ matrix of static-opponent win rates, its unweighted average, and its minimum. The minimum identifies vulnerabilities that an average over weak static opponents could conceal. Table~\ref{tab:performance} summarizes these comparisons; each win-rate entry uses balanced sides and initial roles.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+Method & Static mean & Static minimum & Random & IBR & Other proposed\\
+\midrule
+$\alpha$-potential & \TBD & \TBD & \TBD & \TBD & \TBD\\
+Self-play RL & \TBD & \TBD & \TBD & \TBD & \TBD\\
+\bottomrule
+\end{tabular}
+\caption{Point win rates for Q1. All measurements are pending; ``Other proposed'' denotes the direct comparison between the two methods. The fifteen individual static-opponent results are also reported as a $5\times3$ matrix.}
+\label{tab:performance}
+\end{table}
+
+\paragraph{Unilateral improvement.}
+For a frozen profile $\pi=(\pi^1,\pi^2)$, measure the state-dependent response gain
+\begin{equation}
+  \mathcal{R}_i(x;\pi)=
+  \sup_{\widetilde\pi^i\in\Pi^i_{\mathrm{eval}}}
+  V^i(x;\widetilde\pi^i,\pi^{-i})-V^i(x;\pi).
+  \label{eq:empiricalregret}
+\end{equation}
+The notation $V^i(x;\pi)$ denotes the same discounted return as Equation~\eqref{eq:value}, evaluated under the indicated policies. Search for responses against each frozen opponent using multiple initializations and independently trained response policies, then estimate their gains on fresh rollouts. Include the original player policy among response candidates. Report both gains within the compact potential-policy family and gains found using a common, more expressive state-conditioned response class $\Pi^i_{\mathrm{eval}}$. A response found by finite search provides a lower bound on the supremum, not an upper-bound certificate of Nash regret. For the potential method, additionally plot held-out unilateral-change residuals and assess value estimates against independent simulated returns.
+
+\draftresult{The complete static-opponent matrices and win-rate table; confidence intervals; best-response gains for both players; potential residual and value-error plots; online computation time. State which comparisons are supported by these measurements.}
+
+\subsection{Effects of Data, Horizon, and Stochasticity}
+\label{sec:resultsablation}
+
+\paragraph{Training-data volume.}
+Train the value estimators and potential function with nested subsets containing different numbers $M$ of independently generated rallies. Keep the network architecture, horizon, discount factor, and optimization protocol fixed, and use a common held-out evaluation set. Report the number of sampled transitions and unilateral-deviation pairs as well as $M$, since many correlated states from one rally do not constitute independent games. Compare value-estimation error, potential-change residuals, response gains, and competitive win rates. This separates fitting a sampled potential from learning one that supports useful strategic decisions on unseen states.
+
+\paragraph{Short and long horizons.}
+First vary the continuation length $H$ at a fixed discount factor to examine whether modeling additional exchanges improves strategic decisions. Then vary $\gamma$ at a sufficiently long common cutoff to examine the effect of discounting. The latter changes the objective in Equation~\eqref{eq:value}, whereas the former changes its finite-horizon approximation. Evaluate every variant under a common reference scoring objective and against the same opponents. Report total simulated exchanges in addition to rally counts, since longer continuations require more data generation. With the sparse point utility, short continuations may contain no terminal outcome; unfinished rollouts are therefore distinguished from terminal ones, and any bootstrap correction is specified. These comparisons test whether longer-term consequences of placement and recovery outweigh the additional estimation difficulty.
+
+\paragraph{Stochastic game formulation and stochastic policies.}
+Separate randomness in strategic action selection from randomness in physical transitions. Compare self-play trained under deterministic transitions and under controlled transition perturbations, retaining the same initialization distribution and training budget. Evaluate both training variants in shared nominal and perturbed test environments. Within each, compare categorical action sampling with deterministic argmax deployment of the same trained actors. This forms a $2\times2$ comparison of training dynamics and deployment policy, with the perturbation model reported explicitly. Use win rates and response gains to determine whether variation in shot placement and preparation improves resistance to exploitation, and whether uncertain dynamics improve performance under physical variation. Report policy entropy by role so that these effects can be related to the learned action distributions.
+
+\draftresult{Data-volume curves, separate horizon and discount-factor comparisons, simulated-interaction budgets, and the four stochasticity conditions. Report variability across training seeds and identify whether the observations concern strategic randomization, physical robustness, or both.}
+
+\subsection{Correspondence with Human Table Tennis}
+\label{sec:resultshuman}
+
+\paragraph{Position-conditioned return heatmaps.}
+Extract player locations, racket-contact events, and returned-ball landing locations from human table tennis videos, using calibrated table coordinates and exchange segmentation \citep{etaat2025latte,voeikov2020ttnet}. Express each exchange in a common attacker-oriented frame so that left and right have the same meaning across players, videos, and simulation. At a matched pre-strike decision phase, assign the attacker and opponent to lateral bins $s^{\attack},s^{\defend}\in\{L,C,R\}$. Analyze all nine position combinations, including attacker-left/opponent-left and attacker-left/opponent-right. Report the timing convention and the mapping from robot preparation configurations to comparable position bins.
+
+Map valid first-bounce locations on the opponent's half to the same five target regions, using a fixed partition defined by the target coordinates. For each context $s=(s^{\attack},s^{\defend})$, estimate
+\begin{equation}
+  h_{\mathrm{human}}(k\mid s)=
+  \frac{n_{\mathrm{human}}(k,s)}
+       {\sum_{j=1}^{5}n_{\mathrm{human}}(j,s)},
+  \quad k\in\mathcal{K},
+  \label{eq:humanheatmap}
+\end{equation}
+where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. Apply the same procedure to realized landing locations from each proposed method. Because a player's intended target is not directly observable in video, compare realized locations on both sides of the analysis; commanded robot targets can be shown separately. Heatmaps use common color scales and display context sample counts. Invalid returns are reported separately, rather than assigned to a valid target region.
+
+\paragraph{Correlation and distributional similarity.}
+For each sufficiently sampled context, compare the five-entry human and model distributions with Pearson correlation and Jensen--Shannon divergence. Correlation is undefined for a constant distribution, so these cases are identified rather than given an arbitrary score. Compare both proposed methods with the static and uniform-random references, and aggregate context-level similarities using common, explicitly stated weights. Bootstrap by human player or match and by independent simulation seed, preserving within-rally dependence. Repeat the analysis on held-out players and, where observations permit, matched ball-speed, incoming-placement, and handedness groups. This tests whether agreement persists after conditioning on the situations in which shots are made.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Context $(s^{\attack},s^{\defend})$ & Human returns & $\rho_{\alpha}$ & $\rho_{\mathrm{RL}}$\\
+\midrule
+$(L,L)$ & \TBD & \TBD & \TBD\\
+$(L,C)$ & \TBD & \TBD & \TBD\\
+$(L,R)$ & \TBD & \TBD & \TBD\\
+$(C,L)$ & \TBD & \TBD & \TBD\\
+$(C,C)$ & \TBD & \TBD & \TBD\\
+$(C,R)$ & \TBD & \TBD & \TBD\\
+$(R,L)$ & \TBD & \TBD & \TBD\\
+$(R,C)$ & \TBD & \TBD & \TBD\\
+$(R,R)$ & \TBD & \TBD & \TBD\\
+\bottomrule
+\end{tabular}
+\caption{Position-conditioned human comparison for Q3. The correlations compare realized landing distributions; sample counts, values, and confidence intervals are pending. Accompanying heatmaps and Jensen--Shannon divergences provide the distributional comparison.}
+\label{tab:humancorrelation}
+\end{table}
+
+\paragraph{Strategic interpretation.}
+Examine whether corresponding contexts favor similar target regions and whether these preferences change with the opponent's position. Where preparation trajectories can be extracted, also compare recovery positions after a return. Similarity would support the claim that the modeled game captures some strategic patterns of human play; differences may reflect distinct physical capabilities, observations, or objectives. Neither heatmap correlation nor agreement with expert behavior alone establishes that the human strategies are Nash equilibria.
+
+\draftresult{The video sources, player and exchange counts, extraction validation, nine-context heatmaps, correlation and divergence estimates with uncertainty, and evidence for any claimed agreement or disagreement.}
+
+\begin{thebibliography}{26}
+
+\bibitem[D'Ambrosio et~al.(2024)]{dambrosio2024competitive}
+David B. D'Ambrosio, Saminda Abeyruwan, Laura Graesser, Atil Iscen,
+Heni Ben Amor, Alex Bewley, et~al.
+\newblock Achieving human level competitive robot table tennis.
+\newblock \emph{arXiv:2408.03906}, 2024.
+\newblock \url{https://arxiv.org/abs/2408.03906}.
+
+\bibitem[D\"urr et~al.(2026)]{durr2026ace}
+Peter D\"urr, Mireille El~Gheche, Guilherme Jorge Maeda, et~al.
+\newblock Outplaying elite table tennis players with an autonomous robot.
+\newblock \emph{Nature}, 652:886--891, 2026.
+\newblock \url{https://doi.org/10.1038/s41586-026-10338-5}.
+
+\bibitem[Etaat et~al.(2025)]{etaat2025latte}
+Daniel Etaat, Dvij Kalaria, Nima Rahmanian, and S.~Shankar Sastry.
+\newblock LATTE-MV: Learning to anticipate table tennis hits from monocular videos.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+and Pattern Recognition}, 2025.
+\newblock \url{https://arxiv.org/abs/2503.20936}.
+
+\bibitem[Fridovich-Keil et~al.(2020)]{fridovich2020ilqgames}
+David Fridovich-Keil, Ellis Ratner, Lasse Peters, Anca D. Dragan, and
+Claire J. Tomlin.
+\newblock Efficient iterative linear-quadratic approximations for nonlinear
+multi-player general-sum differential games.
+\newblock In \emph{IEEE International Conference on Robotics and Automation},
+pages 1475--1481, 2020.
+\newblock \url{https://arxiv.org/abs/1909.04694}.
+
+\bibitem[Gao et~al.(2020)]{gao2020modelfree}
+Wenbo Gao, Laura Graesser, Krzysztof Choromanski, Xingyou Song, Nevena Lazic,
+Pannag Sanketi, Vikas Sindhwani, and Navdeep Jaitly.
+\newblock Robotic table tennis with model-free reinforcement learning.
+\newblock \emph{arXiv:2003.14398}, 2020.
+\newblock \url{https://arxiv.org/abs/2003.14398}.
+
+\bibitem[Guo et~al.(2023)]{guo2023markov}
+Xin Guo, Xinyu Li, Chinmay Maheshwari, Shankar Sastry, and Manxi Wu.
+\newblock Markov $\alpha$-potential games.
+\newblock \emph{arXiv:2305.12553}, 2023.
+\newblock \url{https://arxiv.org/abs/2305.12553}.
+
+\bibitem[Guo et~al.(2024)]{guo2024dynamic}
+Xin Guo, Xinyu Li, and Yufei Zhang.
+\newblock An $\alpha$-potential game framework for $N$-player dynamic games.
+\newblock \emph{arXiv:2403.16962}, 2024.
+\newblock \url{https://arxiv.org/abs/2403.16962}.
+
+\bibitem[Heinrich and Silver(2016)]{heinrich2016nfsp}
+Johannes Heinrich and David Silver.
+\newblock Deep reinforcement learning from self-play in imperfect-information games.
+\newblock \emph{arXiv:1603.01121}, 2016.
+\newblock \url{https://arxiv.org/abs/1603.01121}.
+
+\bibitem[Jia et~al.(2023)]{jia2023rapid}
+Yixuan Jia, Maulik Bhatt, and Negar Mehr.
+\newblock RAPID: Autonomous multi-agent racing using constrained potential dynamic games.
+\newblock In \emph{European Control Conference}, pages 1--8, 2023.
+\newblock \url{https://arxiv.org/abs/2305.00579}.
+
+\bibitem[Kalaria et~al.(2025)]{kalaria2025racer}
+Dvij Kalaria, Chinmay Maheshwari, and Shankar Sastry.
+\newblock $\alpha$-RACER: Real-time algorithm for game-theoretic motion planning
+and control in autonomous racing using near-potential function.
+\newblock In \emph{Proceedings of the 7th Annual Learning for Dynamics \& Control
+Conference}, volume 283 of \emph{Proceedings of Machine Learning Research},
+pages 959--972, 2025.
+\newblock \url{https://proceedings.mlr.press/v283/kalaria25a.html}.
+% The supplied arXiv v3 has "using alpha-Potential Function" in its title.
+% This bibliography uses the published PMLR record's title and pagination.
+
+\bibitem[Kavuncu et~al.(2021)]{kavuncu2021potential}
+Talha Kavuncu, Ayberk Yaraneri, and Negar Mehr.
+\newblock Potential iLQR: A potential-minimizing controller for planning multi-agent
+interactive trajectories.
+\newblock \emph{arXiv:2107.04926}, 2021.
+\newblock \url{https://arxiv.org/abs/2107.04926}.
+
+\bibitem[Lanctot et~al.(2017)]{lanctot2017psro}
+Marc Lanctot, Vinicius Zambaldi, Audrunas Gruslys, Angeliki Lazaridou,
+Karl Tuyls, Julien Perolat, David Silver, and Thore Graepel.
+\newblock A unified game-theoretic approach to multiagent reinforcement learning.
+\newblock In \emph{Advances in Neural Information Processing Systems}, volume 30, 2017.
+\newblock \url{https://arxiv.org/abs/1711.00832}.
+
+\bibitem[Li et~al.(2015)]{li2015landing}
+Jing Li, Xiaopeng Chen, Qiang Huang, Xuechao Chen, Zhangguo Yu, and Yingxian Duo.
+\newblock Designation and control of landing points for competitive robotic table tennis.
+\newblock \emph{International Journal of Advanced Robotic Systems}, 12(7), 2015.
+\newblock \url{https://doi.org/10.5772/60855}.
+
+\bibitem[Mahjourian et~al.(2018)]{mahjourian2018hierarchical}
+Reza Mahjourian, Risto Miikkulainen, Nevena Lazic, Sergey Levine, and Navdeep Jaitly.
+\newblock Hierarchical policy design for sample-efficient learning of robot table tennis
+through self-play.
+\newblock \emph{arXiv:1811.12927}, 2018.
+\newblock \url{https://arxiv.org/abs/1811.12927}.
+
+\bibitem[M\"ulling et~al.(2014)]{muelling2014strategies}
+Katharina M\"ulling, Abdeslam Boularias, Betty Mohler, Bernhard Sch\"olkopf,
+and Jan Peters.
+\newblock Learning strategies in table tennis using inverse reinforcement learning.
+\newblock \emph{Biological Cybernetics}, 108(5):603--619, 2014.
+\newblock \url{https://doi.org/10.1007/s00422-014-0599-1}.
+
+\bibitem[Schulman et~al.(2017)]{schulman2017ppo}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov.
+\newblock Proximal policy optimization algorithms.
+\newblock \emph{arXiv:1707.06347}, 2017.
+\newblock \url{https://arxiv.org/abs/1707.06347}.
+
+\bibitem[Silver et~al.(2018)]{silver2018alphazero}
+David Silver, Thomas Hubert, Julian Schrittwieser, Ioannis Antonoglou,
+Matthew Lai, Arthur Guez, Marc Lanctot, Laurent Sifre, Dharshan Kumaran,
+Thore Graepel, Timothy Lillicrap, Karen Simonyan, and Demis Hassabis.
+\newblock A general reinforcement learning algorithm that masters chess, shogi,
+and Go through self-play.
+\newblock \emph{Science}, 362(6419):1140--1144, 2018.
+\newblock \url{https://doi.org/10.1126/science.aar6404}.
+
+\bibitem[Spica et~al.(2020)]{spica2020drone}
+Riccardo Spica, Eric Cristofalo, Zijian Wang, Eduardo Montijano, and Mac Schwager.
+\newblock A real-time game theoretic planner for autonomous two-player drone racing.
+\newblock \emph{IEEE Transactions on Robotics}, 36(5):1389--1403, 2020.
+\newblock \url{https://msl.stanford.edu/papers/spica_real-time_2020.pdf}.
+
+\bibitem[Su et~al.(2025)]{su2025hitter}
+Zhi Su, Bike Zhang, Nima Rahmanian, Yuman Gao, Qiayuan Liao, Caitlin Regan,
+Koushil Sreenath, and S.~Shankar Sastry.
+\newblock HITTER: A humanoid table tennis robot via hierarchical planning and learning.
+\newblock \emph{arXiv:2508.21043}, 2025.
+\newblock \url{https://arxiv.org/abs/2508.21043}.
+
+\bibitem[Thakkar et~al.(2024)]{thakkar2024hierarchical}
+Rishabh Saumil Thakkar, Aryaman Singh Samyal, David Fridovich-Keil, Zhe Xu,
+and Ufuk Topcu.
+\newblock Hierarchical control for head-to-head autonomous racing.
+\newblock \emph{Field Robotics}, 4:46--69, 2024.
+\newblock \url{https://doi.org/10.55417/fr.2024002}.
+
+\bibitem[Todorov et~al.(2012)]{todorov2012mujoco}
+Emanuel Todorov, Tom Erez, and Yuval Tassa.
+\newblock MuJoCo: A physics engine for model-based control.
+\newblock In \emph{IEEE/RSJ International Conference on Intelligent Robots and Systems},
+pages 5026--5033, 2012.
+\newblock \url{https://doi.org/10.1109/IROS.2012.6386109}.
+
+\bibitem[Voeikov et~al.(2020)]{voeikov2020ttnet}
+Roman Voeikov, Nikolay Falaleev, and Ruslan Baikulov.
+\newblock TTNet: Real-time temporal and spatial video analysis of table tennis.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern Recognition
+Workshops}, 2020.
+\newblock \url{https://arxiv.org/abs/2004.09927}.
+
+\bibitem[Wang et~al.(2011)]{wang2011safe}
+Zhikun Wang, Abdeslam Boularias, Katharina M\"ulling, and Jan Peters.
+\newblock Balancing safety and exploitability in opponent modeling.
+\newblock In \emph{Proceedings of the AAAI Conference on Artificial Intelligence},
+25(1):1515--1520, 2011.
+\newblock \url{https://doi.org/10.1609/aaai.v25i1.7981}.
+
+\bibitem[Wang et~al.(2017)]{wang2017anticipation}
+Zhikun Wang, Abdeslam Boularias, Katharina M\"ulling, Bernhard Sch\"olkopf,
+and Jan Peters.
+\newblock Anticipatory action selection for human--robot table tennis.
+\newblock \emph{Artificial Intelligence}, 247:399--414, 2017.
+\newblock \url{https://doi.org/10.1016/j.artint.2014.11.007}.
+
+\bibitem[Wang et~al.(2019)]{wang2019racing}
+Mingyu Wang, Zijian Wang, John Talbot, J.~Christian Gerdes, and Mac Schwager.
+\newblock Game theoretic planning for self-driving cars in competitive scenarios.
+\newblock In \emph{Robotics: Science and Systems}, 2019.
+\newblock \url{https://doi.org/10.15607/RSS.2019.XV.048}.
+
+\bibitem[Zhu and Borrelli(2024)]{zhu2024sqp}
+Edward L. Zhu and Francesco Borrelli.
+\newblock A sequential quadratic programming approach to the solution of open-loop
+generalized Nash equilibria for autonomous racing.
+\newblock \emph{arXiv:2404.00186}, 2024.
+\newblock \url{https://arxiv.org/abs/2404.00186}.
+
+\end{thebibliography}
+\end{document}

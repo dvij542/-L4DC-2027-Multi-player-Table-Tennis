@@ -1,0 +1,44 @@
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Notation} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Notation} & \textbf{Description} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+\(\mathbf{x}^i\) & State vector of car \(i\), including position, velocity, and angular velocity. \\
+\(p_x^i, p_y^i\) & Longitudinal and lateral positions of car \(i\) in the global frame. \\
+\(\phi^i\) & Orientation of car \(i\) in the global frame. \\
+\(v_x^i, v_y^i\) & Longitudinal and lateral velocities of car \(i\) in the body frame. \\
+\(\omega^i\) & Angular velocity of car \(i\) in the global frame. \\
+\(\mathbf{u}^i = (d^i, \delta^i)\) & Control input for car \(i\), where \(d^i\) is the throttle and \(\delta^i\) is the steering angle. \\
+\(d^i\) & Throttle input of car \(i\). \\
+\(\delta^i\) & Steering angle of car \(i\). \\
+\(d_{\min}, d_{\max}\) & Minimum and maximum throttle limits for car \(i\). \\
+\(\delta_{\min}, \delta_{\max}\) & Minimum and maximum steering angle limits for car \(i\). \\
+\(m^i\) & Mass of car \(i\). \\
+\(I_z^i\) & Moment of inertia of car \(i\) in the vertical direction about the center of mass. \\
+\(l_f^i\) & Distance from the center of mass to the front wheel of car \(i\). \\
+\(l_r^i\) & Distance from the center of mass to the rear wheel of car \(i\). \\
+\(F_{r,x,t}^i\) & Force applied to the rear wheel of car \(i\) in the longitudinal direction at time \(t\). \\
+\(F_{r,y,t}^i\) & Force applied to the rear wheel of car \(i\) in the lateral direction at time \(t\). \\
+\(F_{f,y,t}^i\) & Force applied to the front wheel of car \(i\) in the lateral direction at time \(t\). \\
+\(\Delta t\) & Time step for the simulation. \\
+\(\gamma\) & Discount factor in the utility function. \\
+\(\mathbf{x}_t\) & State of the system at time \(t\). \\
+\(\textbf{u}_t^i\) & Control input of car \(i\) at time \(t\). \\
+\(\omega_t^i\) & Angular velocity of car \(i\) at time \(t\). \\
+\(\theta^i\) & Parameter of car \(i\)'s policy. \\
+\(\Theta^i\) & Set of possible parameters for car \(i\)'s policy. \\
+\(\Pi^i\) & Set of possible strategies for car \(i\). \\
+\(\Pi\) & Set of joint strategies for all players (cars). \\
+\(\epsilon\) & The tolerance used in the definition of \(\epsilon\)-Nash equilibrium. \\
+\(V^i(\mathbf{x}, \theta^i, \theta^{-i})\) & The expected long-run utility of car \(i\) given the state \(\mathbf{x}\) and strategy profile \(\theta\). \\
+\(\theta^\ast\) & The \(\epsilon\)-Nash equilibrium strategy profile. \\
+\end{longtable}

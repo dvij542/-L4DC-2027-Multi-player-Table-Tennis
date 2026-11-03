@@ -1,0 +1,194 @@
+% \newtheorem{theorem}{Theorem}[section]
+% \newtheorem{lemma}[theorem]{Lemma}
+% \newtheorem{proposition}[theorem]{Proposition}
+% \newtheorem{corollary}[theorem]{Corollary}
+
+% \newtheorem{remark}[theorem]{Remark}
+\newtheorem{assumption}[theorem]{Assumption}
+% \newtheorem{example}[theorem]{Example}
+
+% \newtheorem{definition}[theorem]{Definition}
+
+\newcommand{\dual}{\ensuremath{^*}}
+\newcommand{\defas}{\ensuremath{\coloneqq}}
+
+\newcommand{\sqt}[1][t]{\ensuremath{\sqrt{#1}}}
+
+% \usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+
+\usepackage{graphicx}
+\usepackage{algorithm,algorithmic}
+\usepackage{hyperref}
+%\hypersetup{hidelinks=true}
+\usepackage{textcomp}
+
+% \newtheorem{cor}{Corollary}
+\usepackage{todonotes}
+\usepackage{mathtools}
+\usepackage{verbatim}
+\usepackage{subcaption}
+%Preliminaries 
+\newcommand{\stateSet}{S}
+\newcommand{\actSet}{A}
+\newcommand{\playerSet}{I_N}
+\newcommand{\transition}{P}
+\newcommand{\discount}{\gamma} 
+\newcommand{\game}{\mathcal{G}}
+\newcommand{\stagePayoff}{u}
+\newcommand{\act}{a}
+
+
+\newcommand{\mc}[1]{\mathcal{#1}}
+\newcommand{\policy}{\pi}
+\newcommand{\vFunc}{V}
+\newcommand{\qFunc}{Q}
+\newcommand{\localQFunc}{q}
+\newcommand{\aFunc}{A}
+
+\newcommand{\policyNash}{\pi^\ast}
+\newcommand{\potential}{\Phi} 
+\newcommand{\initDist}{\mu}
+\newcommand{\belief}{\hat{\pi}} 
+\newcommand{\qFuncHat}{\hat{q}}
+\newcommand{\localQHat}{\bar{q}}
+\newcommand{\localQTilde}{\tilde{q}}
+\newcommand{\reward}{r}
+
+\newcommand{\stepFast}{\alpha}
+\newcommand{\stepSlow}{\beta}
+\newcommand{\deltaFunc}{\mathbbm{1}}
+
+\newcommand{\lyap}{\phi}
+\newcommand{\dDist}{d}
+\newcommand{\optPolicy}{\bar{\policy}}
+
+\newcommand{\policyBR}{\pi^\dagger}
+\newcommand{\br}{\textsf{br}}
+
+\newcommand{\bris}{\mathrm{br}_i(s; \pi)}
+\newcommand{\tildebris}{\widetilde{\mathrm{br}}_i(s; \pi)}
+\newcommand{\bri}{\mathrm{br}_i(\pi)}
+\newcommand{\ami}{a_{-i}}
+\newcommand{\piik}{\pi_i^k}
+
+\newcommand{\ai}{a_i}
+\newcommand{\Ai}{A_i}
+\newcommand{\Ami}{A_{-i}}
+\newcommand{\eqpi}{\pi^*}
+\newcommand{\nk}{n^k}
+\newcommand{\ti}{\nu_i}
+\newcommand{\sk}{s^k}
+\newcommand{\Gtilde}{\tilde{\game}}
+
+\newcommand{\nkak}{\tilde{n}_i}
+\newcommand{\utilde}{\tilde{u}}
+
+\newcommand{\congestionGame}{\game_{\textsf{mcg}}}
+\newcommand{\pertCommonGame}{\game_{\textsf{pmtg}}}
+
+\newcommand{\imax}{\bar{i}^{(t)}}
+\newcommand{\smax}{\bar{s}^{(t)}}
+\newcommand{\bQ}{\mathbf{Q}}
+\newcommand{\mnpg}{\alpha}
+
+\newcommand{\potentialFunctions}{\mathcal{F}}
+\newcommand{\potentialFunctionsRestricted}{\tilde{\mathcal{F}}}
+
+
+\newcommand{\nearStatePotentialGameParam}{\kappa}
+
+\newcommand{\nearStatePotentialGameSet}{\Gamma}
+
+%\usepackage{enumitem}
+% \usepackage{amsthm}
+\newcommand{\ra}{\rightarrow}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\ls}[1]{\left[#1\right]}
+\newcommand{\lr}[1]{\left(#1\right)}
+\newcommand{\lara}[1]{\left\langle #1 \right\rangle}
+\newcommand{\grad}{\nabla}
+\newcommand{\avg}{\mathbb{E}}
+
+\usepackage{bbm}
+% \usepackage{algorithmic}
+% \usepackage[ruled]{algorithm2e}
+
+
+\newcommand {\bea}{\begin{eqnarray}}
+	\newcommand {\eea}{\end{eqnarray}}
+\newcommand {\E}[1]{\mathrm{E}\left( #1 \right)}
+\newcommand {\Ep}[2]{{\mathrm{E}_{\mathbb{P}_{#1}} \left( #2 \right)}}
+\newcommand {\supEp}[1]{\displaystyle \sup_{\mathbb{P} \in \mathbb{F}} \Ep{}{#1}}
+\newcommand {\supEpf}[2]{\displaystyle \sup_{\mathbb{P} \in \mathbb{F}_{#1}} \Ep{}{#2}}
+\newcommand {\pos}[1]{\paren{#1}^+}
+\renewcommand {\neg}[1]{\paren{#1}^-}
+\newcommand {\pibound}[1]{\ensuremath{\pi^{#1}\paren{r^0, \mb{r}}}}
+\newcommand {\etabound}[1]{\ensuremath{\eta^{#1}\paren{r^0, \mb{r}}}}
+\newcommand \conv {\mathrm{conv}}
+\newcommand {\p}{{\rm P}}
+% mb
+\newcommand{\mb}[1]{\mbox{\boldmath \ensuremath{#1}}}
+\newcommand{\mbt}[1]{\mb{\tilde{#1}}}
+\newcommand{\mbb}[1]{\mb{\bar{#1}}}
+\newcommand{\mbbs}[1]{\mbb{\scriptstyle{#1}}}
+\newcommand{\mbh}[1]{\mb{\hat{#1}}}
+\newcommand{\mbth}[1]{\mbt{\hat{#1}}}
+\newcommand{\mbc}[1]{\mb{\check{#1}}}
+\newcommand{\mbtc}[1]{\mbt{\check{#1}}}
+\newcommand{\mbs}[1]{\mb{\scriptstyle{#1}}}
+\newcommand{\mbst}[1]{\mbs{\tilde{#1}}}
+\newcommand{\mbsh}[1]{\mbs{\hat{#1}}}
+% mc
+%\newcommand{\mc}[1]{\mbox{\ensuremath{\mathcal{#1}}}}
+\newcommand{\mch}[1]{\hat{\mc{#1}}}
+\newcommand{\mcs}[1]{\mc{\scriptstyle{#1}}}
+\newcommand{\mcss}[1]{\mc{\scriptscriptstyle{#1}}}
+\newcommand{\mcsh}[1]{\hat{\mcs{#1}}}
+\newcommand{\mbss}[1]{{\mbox{\boldmath \tiny{$#1$}}}}
+\newcommand{\eucnorm}[1]{\left\| #1 \right\|_2}
+\newcommand{\dpv}{\displaystyle \vspace{3pt}}
+\newcommand{\diag}[1]{\textbf{diag}\paren{#1}}
+\newcommand{\yldrk}{\mb{y}^k\paren{\mbt{z}}}
+\newcommand{\abs}[1]{\left| #1 \right|}
+\DeclareMathOperator{\CVaR}{CVaR}
+\DeclareMathOperator{\VaR}{VaR}
+% combinations
+\renewcommand{\mbc}[1]{\mb{\mc{#1}}}
+%misc
+\newcommand{\ceil}[1]{\left\lceil #1  \right\rceil}
+
+% %\newtheorem{lemma}[theorem]{Lemma}
+% \newtheorem{conj}{Conjecture}[section]
+% \newtheorem{coro}{Corollary}[section]
+% \newtheorem{Assumption}{Assumption}[section]
+\newcommand{\sE}{\mathbb{E}}
+\newcommand{\md}{\mathbf{d}}
+\newcommand{\eg}{\textit{e.g.}}
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\cb}[1]{{\color{blue}#1}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{subcaption}
+%\usepackage{natbib}
+\usepackage{algorithm,algorithmic}
+
+\def\bl#1{{\color{blue}#1}}
+\def\rd#1{{\color{red}#1}}
+\def\gr#1{{\color{green}#1}}
+\def\red#1{{\color{red}#1}}
+\def\ora#1{{\color{orange}#1}}
+\def\cy#1{{\color{cyan}#1}}
+
+\def \eps{\varepsilon}
+\def \ep{\hbox{ }\hfill$\Box$}
+\def \epR{\hbox{ }\hfill$\lozenge$}
+
+\def \reff#1{{\rm(\ref{#1})}}
+\def \beqs{\begin{eqnarray*}}
+\def \enqs{\end{eqnarray*}}
+\def \beq{\begin{eqnarray}}
+\def \enq{\end{eqnarray}}
