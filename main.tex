@@ -60,7 +60,7 @@ Nash Equilibrium, $\alpha$-Potential Functions, Self-Play Reinforcement Learning
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{Figures/figure1.pdf}
-\caption{Illustrative MuJoCo rendering of the robot table-tennis game. Blue dashed outlines mark gantry travel regions. Green rackets show target poses, and dashed arrows indicate the lateral approach directions. Five return choices are marked on the right half of the table, with target 3 centered between the four corner targets. The preparation positions are marked for the right robot. The ball is shown at table-tennis size, and the orange velocity arrow is scaled for visibility.}
+\caption{Robot table-tennis game environment. Five return choices are marked on the right half of the table, with target 3 centered between the four corner targets. The preparation positions are marked for the right robot.}
 \label{fig:environment}
 \end{figure}
 }
@@ -156,7 +156,6 @@ If Equation~\eqref{eq:nash} holds for every admissible initial state, the profil
 
 \paragraph{Players and strategic roles.}
 For singles table tennis, $\Players=\{1,2\}$. The attacker and defender are roles assigned to these players, rather than additional players. Let $\iota_t\in\Players$ denote the attacker during exchange $t$, and let $\jmath_t=3-\iota_t$ denote the defender. The attacker receives the currently incoming ball and is responsible for producing the next return. The defender, having produced the preceding shot, prepares to receive the attacker's forthcoming return. The terms refer to these responsibilities even when a shot is tactically conservative. Each robot consists of a KUKA iiwa arm with a racket mounted on its end effector and a base mounted on a drivable gantry (Figure~\ref{fig:environment}).
-
 
 \paragraph{Exchange timing and role switching.}
 An exchange begins after the preceding racket contact, when the current attacker has an incoming ball to return. During this interval, the attacker selects a return target and executes the return, while the defender selects and moves toward a preparation position. After the attacker produces a successful return and the rally continues, the next exchange has $(\iota_{t+1},\jmath_{t+1})=(\jmath_t,\iota_t)$.
