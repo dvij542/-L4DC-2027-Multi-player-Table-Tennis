@@ -1,8 +1,10 @@
 {
   "scene": "supplied SkillEnv",
-  "skill_profile": "current",
+  "skill_profile": "aggressive",
+  "floor": "MuJoCo checker material with directional cast shadows",
+  "snapshot_skill_profile": "aggressive",
   "snapshot_episode": 1,
-  "snapshot_step": 20,
+  "snapshot_step": 101,
   "mujoco_version": "4.0.0",
   "source_sha256": {
     "mujoco_env_comp.py": "b786b5fa1c63d25e3f02ed52367bf257f2429ec7d6145ef63f6efef580af97e5",
@@ -21,13 +23,13 @@
   ],
   "return_targets": [
     [
-      2.185,
-      -0.38,
+      2.5,
+      -0.646,
       0.5820000000000001
     ],
     [
-      1.95,
-      -0.38,
+      1.9,
+      -0.646,
       0.5820000000000001
     ],
     [
@@ -36,13 +38,13 @@
       0.5820000000000001
     ],
     [
-      1.95,
-      0.38,
+      1.9,
+      0.646,
       0.5820000000000001
     ],
     [
-      2.185,
-      0.38,
+      2.5,
+      0.646,
       0.5820000000000001
     ]
   ],
@@ -75,14 +77,14 @@
     ]
   ],
   "ball_position": [
-    1.2529180446915686,
-    -0.18757975120152076,
-    1.0155450000000004
+    1.2502073260475872,
+    -0.2829785801353621,
+    1.072854109944088
   ],
   "ball_velocity": [
-    4.5,
-    -0.8697979744354568,
-    -1.2373
+    -3.640414225938745,
+    -2.0034037474854998,
+    -2.004020674548634
   ],
   "velocity_display_time_scale": 0.14,
   "camera_name": "overview"

@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import xml.etree.ElementTree as ET
 
 import matplotlib
 matplotlib.use("Agg")
@@ -47,7 +48,7 @@ def capture_snapshot(env, source: Path, checkpoint: Path, destination: Path):
     for episode in range(3):
         env.set_skills("left_short", "right")
         obs, info = env.reset(seed=43 + episode)
-        for step in range(170):
+        for step in range(200):
             action = np.concatenate([
                 policy.predict(build_obs(obs, info, player), deterministic=True)[0]
                 for player in (1, 2)
@@ -55,8 +56,11 @@ def capture_snapshot(env, source: Path, checkpoint: Path, destination: Path):
             obs, _, done, truncated, info = env.step(action)
             mujoco.mj_forward(env.model, env.data)
             ball = env.data.geom("ball_geom").xpos.copy()
-            if step > 10 and 0.1 < ball[0] < 2.9 and 0.72 < ball[2] < 1.45 and abs(ball[1]) < 0.7:
-                score = -abs(ball[0] - 1.25) - 0.25 * abs(ball[1]) - 0.4 * abs(ball[2] - 0.95)
+            if step > 55 and 0.1 < ball[0] < 2.9 and 0.72 < ball[2] < 1.45 and abs(ball[1]) < 0.7:
+                racket_heights = [float(env.data.geom(name).xpos[2]) for name in ("racket", "racket_opp")]
+                score = (-abs(ball[0] - 1.25) - 0.25 * abs(ball[1])
+                         - 0.4 * abs(ball[2] - 0.95)
+                         - 0.5 * sum(abs(z - 1.0) for z in racket_heights))
                 if score > best_score:
                     best_score = score
                     best = {
@@ -64,6 +68,7 @@ def capture_snapshot(env, source: Path, checkpoint: Path, destination: Path):
                         "ctrl": env.data.ctrl.copy(), "body_pos": env.model.body_pos.copy(),
                         "body_quat": env.model.body_quat.copy(), "time": env.data.time,
                         "episode": episode, "step": step, "seed": 43 + episode,
+                        "skill_profile": env.skill_profile,
                     }
             if done or truncated:
                 break
@@ -92,6 +97,7 @@ def main():
     parser.add_argument("--snapshot", type=Path, required=True)
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--skill-profile", default="aggressive", choices=["current", "moderate_aggressive", "aggressive"])
     args = parser.parse_args()
     source, snapshot, output = (p.resolve() for p in (args.sim_root, args.snapshot, args.output))
     checkpoint = args.checkpoint.resolve() if args.checkpoint else None
@@ -101,14 +107,27 @@ def main():
     sys.path.insert(0, str(source))
     from nash_skills.env_wrapper import SkillEnv
     from nash_skills.skills import SKILL_NAMES, world_target_xy
-
-    env = SkillEnv(reset_mode="ready", skill_profile="current")
+    import mujoco_env_comp
+    # Render a visible textured floor inside MuJoCo. This changes materials,
+    # not the simulator's robot, table, racket, or collision geometry.
+    scene = ET.fromstring(mujoco_env_comp.xml)
+    assets = ET.SubElement(scene, "asset")
+    ET.SubElement(assets, "texture", name="figure_floor_texture", type="2d", builtin="checker",
+                  rgb1="0.77 0.79 0.81", rgb2="0.83 0.85 0.87", width="512", height="512")
+    ET.SubElement(assets, "material", name="figure_floor_material", texture="figure_floor_texture",
+                  texuniform="true", texrepeat="0.5 0.5", reflectance="0.0", specular="0.10", shininess="0.1")
+    scene.find(".//geom[@name='floor']").set("material", "figure_floor_material")
+    mujoco_env_comp.xml = ET.tostring(scene, encoding="unicode")
+    env = SkillEnv(reset_mode="ready", skill_profile=args.skill_profile)
     try:
         if not snapshot.exists():
             if checkpoint is None:
                 parser.error("--checkpoint is required when --snapshot does not exist")
             capture_snapshot(env, source, checkpoint, snapshot)
         state = np.load(snapshot, allow_pickle=False)
+        snapshot_profile = str(state["skill_profile"]) if "skill_profile" in state else "current"
+        if snapshot_profile != args.skill_profile:
+            raise ValueError("Snapshot profile does not match --skill-profile; capture a new snapshot for that profile")
         m, d = env.model, env.data
         d.qpos[:] = state["qpos"]
         d.qvel[:] = state["qvel"]
@@ -119,15 +138,21 @@ def main():
         mujoco.mj_forward(m, d)
         width, height = 2400, 1400
         m.vis.global_.offwidth, m.vis.global_.offheight = width, height
-        # Presentation only: printable background and balanced lighting.
-        # No robot, racket, table, or net dimensions/transforms are modified.
-        m.geom_rgba[m.geom("floor").id] = [0.98, 0.98, 0.98, 1]
-        m.geom_rgba[m.geom("table_top").id] = [0.05, 0.24, 0.48, 1]
-        m.vis.headlight.ambient[:] = 0.70
-        m.vis.headlight.diffuse[:] = 0.55
-        m.vis.headlight.specular[:] = 0.1
-        m.light_diffuse[:] = 0.35
-        m.light_ambient[:] = 0.08
+        # Directional key light and restrained fill preserve 3-D shape and
+        # floor shadows instead of flattening the scene with ambient light.
+        m.geom_rgba[m.geom("floor").id] = [1, 1, 1, 1]
+        m.geom_rgba[m.geom("table_top").id] = [0.06, 0.28, 0.36, 1]
+        m.vis.headlight.ambient[:] = 0.08
+        m.vis.headlight.diffuse[:] = 0.25
+        m.vis.headlight.specular[:] = 0.10
+        m.vis.quality.shadowsize = 4096
+        m.light_pos[:] = [[-1.5, -3.0, 6.0], [4.5, 3.0, 6.0]]
+        m.light_dir[:] = [[0.35, 0.5, -1], [-0.4, -0.3, -1]]
+        m.light_type[:] = mujoco.mjtLightType.mjLIGHT_DIRECTIONAL
+        m.light_diffuse[:] = [[0.50, 0.50, 0.50], [0.17, 0.17, 0.17]]
+        m.light_ambient[:] = 0.02
+        m.light_castshadow[:] = [True, False]
+        mujoco.mj_forward(m, d)
         env._env._rgb_renderer = mujoco.Renderer(m, height=height, width=width)
         # Use the supplied RGB rendering path and its centered overview camera.
         image = env.render(mode="rgb_array")
@@ -164,7 +189,7 @@ def main():
             ax.add_patch(Polygon(polygon, closed=True, fc=blue, alpha=0.065, ec="none"))
             ax.add_patch(Polygon(polygon, closed=True, fill=False, ec=blue, lw=1.5, ls=(0, (5, 3))))
         top = float(d.geom("table_top").xpos[2] + m.geom_size[m.geom("table_top").id, 2])
-        targets = [(*world_target_xy(1, skill), top + 0.002) for skill in SKILL_NAMES]
+        targets = [(*world_target_xy(1, skill, profile=args.skill_profile), top + 0.002) for skill in SKILL_NAMES]
         for index, p in enumerate(targets, 1):
             xy = project(p)
             ax.add_patch(Circle(xy, 17, fc="#f3c45e", ec="#895b0d", lw=1, zorder=8))
@@ -195,7 +220,7 @@ def main():
         label("Target racket pose", (355, 470), d.geom("cylinder").xpos, green)
         label("Target racket pose", (2050, 470), d.geom("cylinder_opp").xpos, green)
         label("Ball", (985, 100), ball, gold)
-        label(r"Ball velocity $\mathbf{v}^{b}$", (1360, 80), ball + 0.075 * velocity, gold)
+        label(r"Ball velocity $\mathbf{v}^{b}$", (750, 165), ball + 0.075 * velocity, gold)
         label("Gantry movable region", (335, 1010), [-1.15, -0.8, 0.006], blue)
         label("Gantry movable region", (2060, 1010), [4.15, -0.8, 0.006], blue)
         label(r"Return choices $k_1,\ldots,k_5$", (1370, 825), [2.30, -0.10, top + 0.002], gold)
@@ -206,7 +231,9 @@ def main():
         source_files = [source / n for n in ["mujoco_env_comp.py", "iiwa14_comp.xml", "diagnostic_rendering.py",
                         "diagnostic_fixed_skill.py", "nash_skills/skills.py", "nash_skills/env_wrapper.py"]]
         metadata = {
-            "scene": "supplied SkillEnv", "skill_profile": "current", "snapshot_episode": int(state["episode"]),
+            "scene": "supplied SkillEnv", "skill_profile": args.skill_profile,
+            "floor": "MuJoCo checker material with directional cast shadows",
+            "snapshot_skill_profile": snapshot_profile, "snapshot_episode": int(state["episode"]),
             "snapshot_step": int(state["step"]), "mujoco_version": mujoco.__version__,
             "source_sha256": {str(p.relative_to(source)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files},
             "target_names": SKILL_NAMES, "return_targets": targets, "preparation_examples": preps,
