@@ -201,12 +201,12 @@ def main():
             raise ValueError("Snapshot profile does not match --skill-profile; capture a new snapshot for that profile")
         m, d = env.model, env.data
         d.qpos[:] = state["qpos"]
-        # Pull both bases back from the fixed target poses to illustrate approach.
+        # Shift both bases laterally from the fixed target poses to illustrate approach.
         source_gantry_positions = d.qpos[[0, 1, 9, 10]].copy()
-        approach_offset = 0.22
-        x_command_limits, _ = commanded_gantry_limits(source)
-        for index in (0, 9):
-            d.qpos[index] = np.clip(d.qpos[index] - approach_offset, *x_command_limits)
+        approach_offset = 0.42
+        _, y_command_limits = commanded_gantry_limits(source)
+        for index in (1, 10):
+            d.qpos[index] = np.clip(d.qpos[index] + approach_offset, *y_command_limits)
         d.qvel[:] = state["qvel"]
         d.ctrl[:] = state["ctrl"]
         d.time = float(state["time"])
@@ -222,9 +222,9 @@ def main():
         for target_name in ("cylinder", "cylinder_opp"):
             m.geom_size[m.geom(target_name).id, 1] = 0.005
             m.geom_rgba[m.geom(target_name).id, 3] = 0.48
-        # Keep the ball as a truly shaded MuJoCo sphere; enlarge for print legibility.
+        # Keep the native shaded sphere at its table-tennis size (40 mm diameter).
         ball_source_radius = float(m.geom_size[m.geom("ball_geom").id, 0])
-        ball_display_radius = 0.04
+        ball_display_radius = ball_source_radius
         m.geom_size[m.geom("ball_geom").id, 0] = ball_display_radius
         # Directional key light and restrained fill preserve 3-D shape and
         # floor shadows instead of flattening the scene with ambient light.
@@ -356,13 +356,14 @@ def main():
             "outer_targets_adjusted_for_illustration": True,
             "source_gantry_positions": source_gantry_positions.tolist(),
             "display_gantry_positions": d.qpos[[0, 1, 9, 10]].tolist(),
-            "approach_offset_m": approach_offset, "racket_target_gaps_m": approach_gaps,
+            "approach_offset_m": approach_offset, "approach_axis": "local gantry y (lateral)",
+            "racket_target_gaps_m": approach_gaps,
             "ball_display_radius_m": ball_display_radius,
             "ball_source_radius_m": ball_source_radius,
             "ball_is_native_3d_sphere": True,
             "display_refinements": ["four table legs and braces", "mesh net with posts and bands",
                                     "12 mm racket thickness", "gantry approach offsets", "corner target layout",
-                                    "enlarged shaded 3D ball"],
+                                    "native-size shaded 3D ball"],
             "camera_position": eye.tolist(), "racket_display_thickness_m": 0.012,
             "preparation_examples": preps,
             "preparation_markers_are_schematic": True, "commanded_gantry_limits": [xlim, ylim],

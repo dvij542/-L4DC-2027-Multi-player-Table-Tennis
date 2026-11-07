@@ -84,17 +84,18 @@
     -0.32288133145698694
   ],
   "display_gantry_positions": [
-    -0.9568130835042237,
-    -0.5768427026247088,
-    -0.8137812896187601,
-    -0.32288133145698694
+    -0.7368130835042237,
+    -0.15684270262470884,
+    -0.5937812896187601,
+    0.09711866854301304
   ],
-  "approach_offset_m": 0.22,
+  "approach_offset_m": 0.42,
+  "approach_axis": "local gantry y (lateral)",
   "racket_target_gaps_m": {
-    "racket": 0.21266889366033373,
-    "racket_opp": 0.21954956617137333
+    "racket": 0.4323004987028459,
+    "racket_opp": 0.4231125973460742
   },
-  "ball_display_radius_m": 0.04,
+  "ball_display_radius_m": 0.02,
   "ball_source_radius_m": 0.02,
   "ball_is_native_3d_sphere": true,
   "display_refinements": [
@@ -103,7 +104,7 @@
     "12 mm racket thickness",
     "gantry approach offsets",
     "corner target layout",
-    "enlarged shaded 3D ball"
+    "native-size shaded 3D ball"
   ],
   "camera_position": [
     0.6499999761581421,
