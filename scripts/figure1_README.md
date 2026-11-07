@@ -1,6 +1,6 @@
 # Figure 1: supplied simulator scene
 
-Figure 1 is rendered through the supplied `SkillEnv.render(mode="rgb_array")` implementation and its centered `overview` camera. It replaces the earlier illustrative scene assembled from separate assets.
+Figure 1 is rendered through the supplied `SkillEnv.render(mode="rgb_array")` implementation and a near-central `overview` camera with a small lateral offset so the mesh net is visible. It replaces the earlier illustrative scene assembled from separate assets.
 
 ## Inputs
 
@@ -13,17 +13,17 @@ The sources are external dependencies, not copied into this paper repository. Th
 
 ## What is taken directly from the simulator
 
-- Both KUKA robots, mounted rackets, table, and net geometry are unchanged.
+- Both KUKA robot meshes and the captured joint and ball state are preserved. Table supports, net detailing, and racket thickness are refined for the paper illustration as described below.
 - The actual joint and ball state is a captured PPO rollout frame. `figure1_snapshot.npz` preserves that state and the moving target-pose transforms.
 - PPO observations use the exact `build_ppo_obs` function extracted from the supplied `diagnostic_fixed_skill.py`.
 - The green translucent rackets are the scene's own `vis` / `vis_opp` target geometries.
-- The five landing locations are obtained with `world_target_xy(1, skill, profile="aggressive")` in the order given by `SKILL_NAMES`: deep left, short left, center safe, short right, deep right. This wider profile spans x = 1.90--2.50 m and y = +/-0.646 m, with center-safe at (2.0, 0.0) m. This selection applies to the illustration, not to the previously reported results.
+- Four outer landing locations use `world_target_xy(1, skill, profile="aggressive")` in the order given by `SKILL_NAMES`: deep left, short left, center safe, short right, deep right. The outer targets span x = 1.90--2.50 m and y = +/-0.646 m. For the illustration, target 3 is moved to their exact geometric center, (2.20, 0.0) m; the source center-safe target is (2.0, 0.0) m. Both coordinate sets are recorded in the provenance JSON. This display adjustment does not alter the source skill definitions, the captured rollout, or the previously reported results.
 - The ball arrow uses the captured translational velocity. Its display length is scaled for readability, not a calibrated velocity scale.
 - Dashed blue areas show the XY command limits extracted from `KukaTennisEnv.step()`: local x in [-1.2, -0.3] m and local y in [-1, 1] m, mirrored through the second robot's root transform. These are the command clamps, not the different default MJCF joint limits.
 
-The supplied scene represents gantries as sliding robot bases; it has **no gantry rail/frame meshes**. No fictitious hardware, table legs, or new robot geometry is added. Three preparation markers are schematic explanatory examples. The source defines one ready gantry position but no three-position preparation policy. Its ready x coordinate is retained and lateral examples y = -0.65, 0, +0.65 m are used. Their status is explicit in the image, caption, and metadata.
+The supplied scene represents gantries as sliding robot bases; it has **no gantry rail/frame meshes**. For presentation, four table legs with feet and crossbraces, an underside frame, white tabletop lines, and a mesh net with posts, clamps, and a top band are added as static non-colliding display geometry. The source net bar is hidden. Mounted racket faces are displayed at 12 mm total thickness and target-pose rackets at 10 mm. These appearance changes are applied after the original rollout is captured; there is no re-simulation with thinner contact geometry. Three preparation markers are schematic explanatory examples. The source defines one ready gantry position but no three-position preparation policy. Its ready x coordinate is retained and lateral examples y = -0.65, 0, +0.65 m are used. Their status is explicit in the image, caption, and metadata.
 
-A checker material is applied to the existing floor plane. A directional key light produces actual MuJoCo cast shadows; a weaker fill and low ambient light retain shading on the robot meshes. Table color is adjusted for contrast. The floor material and lighting change only the presentation, not physical geometry. All annotation anchors are projected through the camera actually used by MuJoCo.
+A checker material is applied to the existing floor plane. A directional key light produces actual MuJoCo cast shadows; a weaker fill and low ambient light retain shading on the robot meshes. Table color is adjusted for contrast. The floor material, lighting, camera, added supports/net, and racket display sizes are presentation refinements, separate from the original simulation used to capture the state. All annotation anchors are projected through the camera actually used by MuJoCo.
 
 ## Rebuild from the saved frame
 

@@ -33,6 +33,33 @@
       0.5820000000000001
     ],
     [
+      2.2,
+      0.0,
+      0.5820000000000001
+    ],
+    [
+      1.9,
+      0.646,
+      0.5820000000000001
+    ],
+    [
+      2.5,
+      0.646,
+      0.5820000000000001
+    ]
+  ],
+  "source_return_targets": [
+    [
+      2.5,
+      -0.646,
+      0.5820000000000001
+    ],
+    [
+      1.9,
+      -0.646,
+      0.5820000000000001
+    ],
+    [
       2.0,
       0.0,
       0.5820000000000001
@@ -48,6 +75,18 @@
       0.5820000000000001
     ]
   ],
+  "center_target_adjusted_for_illustration": true,
+  "display_refinements": [
+    "four table legs and braces",
+    "mesh net with posts and bands",
+    "12 mm racket thickness"
+  ],
+  "camera_position": [
+    0.6499999761581421,
+    -4.800000190734863,
+    3.200000047683716
+  ],
+  "racket_display_thickness_m": 0.012,
   "preparation_examples": [
     [
       3.5,

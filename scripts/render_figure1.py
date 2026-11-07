@@ -1,7 +1,8 @@
 """Render Figure 1 using the supplied simulator and diagnostics.
 
-Scene geometry, target racket poses, and state are read from SkillEnv.
-Five landing targets come from nash_skills.skills. The three preparation
+The robot state and target racket poses are read from SkillEnv.
+Table supports, a visible mesh net, and thin racket faces are display refinements.
+Four outer landing targets come from nash_skills.skills; target 3 is their center. The three preparation
 markers are explanatory examples, because that set is absent from the source.
 See figure1_README.md for staging the external simulator and rebuilding.
 """
@@ -117,6 +118,73 @@ def main():
     ET.SubElement(assets, "material", name="figure_floor_material", texture="figure_floor_texture",
                   texuniform="true", texrepeat="0.5 0.5", reflectance="0.0", specular="0.10", shininess="0.1")
     scene.find(".//geom[@name='floor']").set("material", "figure_floor_material")
+    scene.find(".//geom[@name='floor']").set("size", "200 200 0.1")
+    # Display-only table detailing: all geoms are static and non-colliding.
+    world = scene.find("worldbody")
+    def display_geom(name, kind, **attributes):
+        return ET.SubElement(world, "geom", name="figure_" + name, type=kind,
+                             contype="0", conaffinity="0", **attributes)
+
+    table_geom = scene.find(".//geom[@name='table_top']")
+    table_body = scene.find(".//body[@name='table']")
+    table_position = np.fromstring(table_body.get("pos"), sep=" ")
+    table_size = np.fromstring(table_geom.get("size"), sep=" ")
+    table_top = table_position[2] + table_size[2]
+    table_bottom = table_position[2] - table_size[2]
+    table_x = table_position[0]
+    for y in (-0.7525, 0.7525):
+        display_geom(f"table_sideline_{y}", "box", pos=f"{table_x} {y} {table_top + 0.001}",
+                     size="1.37 0.008 0.001", rgba="0.95 0.96 0.96 1")
+    for dx in (-1.36, 1.36):
+        display_geom(f"table_endline_{dx}", "box", pos=f"{table_x + dx} 0 {table_top + 0.001}",
+                     size="0.008 0.7625 0.001", rgba="0.95 0.96 0.96 1")
+    display_geom("table_centerline", "box", pos=f"{table_x} 0 {table_top + 0.001}",
+                 size="1.37 0.003 0.001", rgba="0.95 0.96 0.96 1")
+    for dx in (-0.95, 0.95):
+        for y in (-0.55, 0.55):
+            display_geom(f"table_leg_{dx}_{y}", "box",
+                         pos=f"{table_x + dx} {y} {table_bottom / 2}",
+                         size=f"0.032 0.032 {table_bottom / 2}", rgba="0.18 0.22 0.26 1")
+            display_geom(f"table_foot_{dx}_{y}", "box",
+                         pos=f"{table_x + dx} {y} 0.014", size="0.047 0.047 0.014",
+                         rgba="0.10 0.12 0.14 1")
+        display_geom(f"table_crossbrace_{dx}", "box", pos=f"{table_x + dx} 0 0.18",
+                     size="0.022 0.55 0.022", rgba="0.23 0.28 0.32 1")
+    display_geom("table_underframe", "box", pos=f"{table_x} 0 {table_bottom - 0.012}",
+                 size="1.38 0.7725 0.012", rgba="0.16 0.21 0.24 1")
+    # Fine mesh, edge bands, posts, and clamps replace the source's solid bar.
+    scene.find(".//geom[@name='net_geom']").set("rgba", "0 0 0 0")
+    net_top = table_top + 0.1524
+    display_geom("net_backing", "box", pos=f"{table_x} 0 {(table_top + net_top) / 2}",
+                 size="0.0008 0.78 0.0762", rgba="0.12 0.17 0.20 0.18")
+    for k, y in enumerate(np.linspace(-0.78, 0.78, 53)):
+        display_geom(f"net_vertical_{k}", "capsule", size="0.0008",
+                     fromto=f"{table_x} {y} {table_top} {table_x} {y} {net_top}",
+                     rgba="0.17 0.21 0.23 0.85")
+    for k, z in enumerate(np.linspace(table_top, net_top, 9)):
+        display_geom(f"net_horizontal_{k}", "capsule", size="0.0008",
+                     fromto=f"{table_x} -0.78 {z} {table_x} 0.78 {z}",
+                     rgba="0.17 0.21 0.23 0.85")
+    display_geom("net_top_band", "capsule", size="0.006",
+                 fromto=f"{table_x} -0.81 {net_top} {table_x} 0.81 {net_top}",
+                 rgba="0.95 0.96 0.96 1")
+    for y in (-0.80, 0.80):
+        display_geom(f"net_post_{y}", "capsule", size="0.012",
+                     fromto=f"{table_x} {y} {table_bottom - 0.015} {table_x} {y} {net_top + 0.02}",
+                     rgba="0.26 0.30 0.32 1")
+        display_geom(f"net_clamp_{y}", "box", pos=f"{table_x} {y} {table_bottom}",
+                     size="0.04 0.027 0.03", rgba="0.21 0.25 0.28 1")
+    # A small offset from the exact side view makes the physical net visible,
+    # while keeping the camera near the center of the two-player scene.
+    camera = scene.find(".//camera[@name='overview']")
+    camera_eye = np.array([0.65, -4.8, 3.2])
+    camera_forward = np.array([table_x, 0, -0.35]) - camera_eye
+    camera_forward /= np.linalg.norm(camera_forward)
+    camera_right = np.cross(camera_forward, [0, 0, 1])
+    camera_right /= np.linalg.norm(camera_right)
+    camera_up = np.cross(camera_right, camera_forward)
+    camera.set("pos", " ".join(map(str, camera_eye)))
+    camera.set("xyaxes", " ".join(map(str, np.r_[camera_right, camera_up])))
     mujoco_env_comp.xml = ET.tostring(scene, encoding="unicode")
     env = SkillEnv(reset_mode="ready", skill_profile=args.skill_profile)
     try:
@@ -138,6 +206,12 @@ def main():
         mujoco.mj_forward(m, d)
         width, height = 2400, 1400
         m.vis.global_.offwidth, m.vis.global_.offheight = width, height
+        # The source uses thick cylinders for robust contact handling. Thin only
+        # the displayed faces after rollout capture; do not re-simulate with them.
+        for racket_name in ("racket", "racket_opp"):
+            m.geom_size[m.geom(racket_name).id, 1] = 0.006
+        for target_name in ("cylinder", "cylinder_opp"):
+            m.geom_size[m.geom(target_name).id, 1] = 0.005
         # Directional key light and restrained fill preserve 3-D shape and
         # floor shadows instead of flattening the scene with ambient light.
         m.geom_rgba[m.geom("floor").id] = [1, 1, 1, 1]
@@ -145,7 +219,10 @@ def main():
         m.vis.headlight.ambient[:] = 0.08
         m.vis.headlight.diffuse[:] = 0.25
         m.vis.headlight.specular[:] = 0.10
-        m.vis.quality.shadowsize = 4096
+        m.vis.quality.shadowsize = 8192
+        m.vis.quality.offsamples = 8
+        m.stat.center[:] = [table_x, 0, 0.55]
+        m.stat.extent = 6.0
         m.light_pos[:] = [[-1.5, -3.0, 6.0], [4.5, 3.0, 6.0]]
         m.light_dir[:] = [[0.35, 0.5, -1], [-0.4, -0.3, -1]]
         m.light_type[:] = mujoco.mjtLightType.mjLIGHT_DIRECTIONAL
@@ -189,7 +266,10 @@ def main():
             ax.add_patch(Polygon(polygon, closed=True, fc=blue, alpha=0.065, ec="none"))
             ax.add_patch(Polygon(polygon, closed=True, fill=False, ec=blue, lw=1.5, ls=(0, (5, 3))))
         top = float(d.geom("table_top").xpos[2] + m.geom_size[m.geom("table_top").id, 2])
-        targets = [(*world_target_xy(1, skill, profile=args.skill_profile), top + 0.002) for skill in SKILL_NAMES]
+        source_targets = np.array([(*world_target_xy(1, skill, profile=args.skill_profile), top + 0.002)
+                                   for skill in SKILL_NAMES])
+        targets = source_targets.copy()
+        targets[2] = targets[[0, 1, 3, 4]].mean(axis=0)
         for index, p in enumerate(targets, 1):
             xy = project(p)
             ax.add_patch(Circle(xy, 17, fc="#f3c45e", ec="#895b0d", lw=1, zorder=8))
@@ -236,7 +316,12 @@ def main():
             "snapshot_skill_profile": snapshot_profile, "snapshot_episode": int(state["episode"]),
             "snapshot_step": int(state["step"]), "mujoco_version": mujoco.__version__,
             "source_sha256": {str(p.relative_to(source)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_files},
-            "target_names": SKILL_NAMES, "return_targets": targets, "preparation_examples": preps,
+            "target_names": SKILL_NAMES, "return_targets": targets.tolist(),
+            "source_return_targets": source_targets.tolist(),
+            "center_target_adjusted_for_illustration": True,
+            "display_refinements": ["four table legs and braces", "mesh net with posts and bands", "12 mm racket thickness"],
+            "camera_position": eye.tolist(), "racket_display_thickness_m": 0.012,
+            "preparation_examples": preps,
             "preparation_markers_are_schematic": True, "commanded_gantry_limits": [xlim, ylim],
             "ball_position": ball.tolist(), "ball_velocity": velocity.tolist(),
             "velocity_display_time_scale": 0.14, "camera_name": "overview",
