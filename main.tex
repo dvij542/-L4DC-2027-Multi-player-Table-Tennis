@@ -146,10 +146,10 @@ If Equation~\eqref{eq:nash} holds for every admissible initial state, the profil
 \paragraph{Players and strategic roles.}
 For singles table tennis, $\Players=\{1,2\}$. The attacker and defender are roles assigned to these players, rather than additional players. Let $\iota_t\in\Players$ denote the attacker during exchange $t$, and let $\jmath_t=3-\iota_t$ denote the defender. The attacker receives the currently incoming ball and is responsible for producing the next return. The defender, having produced the preceding shot, prepares to receive the attacker's forthcoming return. The terms refer to these responsibilities even when a shot is tactically conservative. Each robot consists of a KUKA iiwa arm with a racket mounted on its end effector and a base mounted on a drivable gantry (Figure~\ref{fig:environment}).
 
-\begin{figure}[tbp]
+\begin{figure}[!t]
 \centering
 \includegraphics[width=\linewidth]{Figures/figure1.pdf}
-\caption{Illustrative MuJoCo rendering of two gantry-mounted KUKA iiwa arms with rackets. Blue dashed outlines mark gantry motion regions; red dashed rackets indicate target poses. Five return choices are marked on the right half of the table, and three preparation positions are marked for the right robot. The orange arrow indicates ball velocity. Coordinates, motion limits, and poses are schematic; arrow length is not to scale.}
+\caption{MuJoCo rollout frame rendered from the supplied simulator. Blue dashed outlines mark the commanded travel regions of the sliding robot bases; translucent green rackets show the controller's target poses. Numbered markers indicate the five return targets from the current skill profile on the right half of the table. The three right-robot preparation markers are schematic examples. The orange arrow shows the simulated ball velocity, with length scaled for visibility.}
 \label{fig:environment}
 \end{figure}
 

@@ -1,32 +1,58 @@
-# Figure 1
+# Figure 1: supplied simulator scene
 
-`render_figure1.py` renders a real MuJoCo scene, then projects vector annotations through MuJoCo's render camera. The output PDF contains the rendered scene as a raster image and editable vector text/markers.
+Figure 1 is rendered through the supplied `SkillEnv.render(mode="rgb_array")` implementation and its centered `overview` camera. It replaces the earlier illustrative scene assembled from separate assets.
 
-This is an **illustrative layout**, not a captured experimental state. The custom XY gantries, their travel envelopes, target locations, preparation positions, racket target poses, ball state, and camera are chosen for explanation. They must be matched to the experimental environment before being described as its exact geometry. The illustration is not evidence of controller performance.
+## Inputs
 
-## Source and license
+The user provided these source folders:
 
-The KUKA iiwa MJCF and meshes come from `MujocoRecon` in:
+- `vis scripts 2`: `mujoco_env_comp.py`, `iiwa14_comp.xml`, `diagnostic_fixed_skill.py`, and `diagnostic_rendering.py`.
+- `nash_skills`: `env_wrapper.py`, `skills.py`, and `__init__.py`.
 
-https://github.com/sastry-group/LATTE-MV/tree/bcada1f744af3e1c39fd5adb5ee5bb534f0d1ba2/MujocoRecon
+The sources are external dependencies, not copied into this paper repository. Their SHA-256 hashes are recorded in `figure1_provenance.json`. Missing robot meshes and the `logs/best_model_tracker1/best_model.zip` controller checkpoint were obtained from `dvij542/ping-pong-game` at commit `37dcb05731c0f07f9132412eec4f440b19ac11cf`, which is the simulator repository referenced by the supplied evaluation scripts. Mesh license information is retained in `figure1-third-party-LICENSE.txt`.
 
-The model's accompanying BSD 3-Clause license is retained in `figure1-third-party-LICENSE.txt` (copyright 2022, Max Planck Gesellschaft). The rendering script duplicates the arm, adds schematic gantry rails, replaces the racket geometry, and chooses display poses by inverse kinematics. External meshes are not vendored in this paper repository.
+## What is taken directly from the simulator
 
-## Rebuild
+- Both KUKA robots, mounted rackets, table, and net geometry are unchanged.
+- The actual joint and ball state is a captured PPO rollout frame. `figure1_snapshot.npz` preserves that state and the moving target-pose transforms.
+- PPO observations use the exact `build_ppo_obs` function extracted from the supplied `diagnostic_fixed_skill.py`.
+- The green translucent rackets are the scene's own `vis` / `vis_opp` target geometries.
+- The five landing locations are obtained with `world_target_xy(1, skill, profile="current")` in the order given by `SKILL_NAMES`: deep left, short left, center safe, short right, deep right.
+- The ball arrow uses the captured translational velocity. Its display length is scaled for readability, not a calibrated velocity scale.
+- Dashed blue areas show the XY command limits extracted from `KukaTennisEnv.step()`: local x in [-1.2, -0.3] m and local y in [-1, 1] m, mirrored through the second robot's root transform. These are the command clamps, not the different default MJCF joint limits.
 
-Validated with Python 3.12 and MuJoCo 4.0.0 on macOS. From the paper repository:
+The supplied scene represents gantries as sliding robot bases; it has **no gantry rail/frame meshes**. No fictitious hardware, table legs, or new robot geometry is added. Three preparation markers are schematic explanatory examples. The source defines one ready gantry position but no three-position preparation policy. Its ready x coordinate is retained and lateral examples y = -0.65, 0, +0.65 m are used. Their status is explicit in the image, caption, and metadata.
+
+Background, lighting, and table color are adjusted only for print readability. All annotation anchors are projected through the camera actually used by MuJoCo.
+
+## Rebuild from the saved frame
+
+Validated with Python 3.12 and MuJoCo 4.0.0 on macOS. Assemble an external simulator directory with this structure:
+
+```text
+simulator/
+  mujoco_env_comp.py
+  iiwa14_comp.xml
+  diagnostic_fixed_skill.py
+  diagnostic_rendering.py
+  assets/                  # robot OBJ meshes from ping-pong-game
+  nash_skills/
+    __init__.py
+    env_wrapper.py
+    skills.py
+```
+
+From the paper repository:
 
 ```bash
 python3 -m venv work/figure1-venv
-work/figure1-venv/bin/pip install 'mujoco==4.0.0' numpy scipy matplotlib Pillow
-git clone https://github.com/sastry-group/LATTE-MV.git work/LATTE-MV
-git -C work/LATTE-MV checkout bcada1f744af3e1c39fd5adb5ee5bb534f0d1ba2
+work/figure1-venv/bin/pip install 'mujoco==4.0.0' numpy scipy matplotlib Pillow gymnasium
 work/figure1-venv/bin/python scripts/render_figure1.py \
-  --source work/LATTE-MV/MujocoRecon \
-  --output Figures/figure1.png \
-  --workdir work/figure1
+  --sim-root /path/to/simulator \
+  --snapshot scripts/figure1_snapshot.npz \
+  --output Figures/figure1.png
 ```
 
-The script exports `figure1.png`, `figure1.pdf`, the intermediate MJCF, an unannotated render, and a JSON record of the illustrated coordinates, joint poses, and ball state. An offscreen OpenGL context is required. On Linux, configure an appropriate MuJoCo rendering backend.
+This exports PNG, PDF with vector annotations, and JSON provenance. A raw RGB render is saved beside the snapshot. An offscreen OpenGL context is required.
 
-The camera is centered on the table, with both gantries visible. Blue outlines indicate the gantry travel envelopes; dashed red rackets are target poses; yellow numbered markers indicate five candidate return locations on the right half; green markers denote three right-robot preparation positions. The orange arrow shows the illustrated ball velocity direction; its display length is not a calibrated velocity scale.
+To capture a new frame, additionally install `stable-baselines3` and `torch`, select a new snapshot path, and pass `--checkpoint /path/to/logs/best_model_tracker1/best_model.zip`. The script evaluates three short rollouts and selects a frame with the ball visible over the table; it does not retrain or evaluate strategic-method performance.

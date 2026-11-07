@@ -1,0 +1,89 @@
+{
+  "scene": "supplied SkillEnv",
+  "skill_profile": "current",
+  "snapshot_episode": 1,
+  "snapshot_step": 20,
+  "mujoco_version": "4.0.0",
+  "source_sha256": {
+    "mujoco_env_comp.py": "b786b5fa1c63d25e3f02ed52367bf257f2429ec7d6145ef63f6efef580af97e5",
+    "iiwa14_comp.xml": "3eaeb7ded510587de780e57aed5e07f78cd2c384d409b4f4d369e942ebd26841",
+    "diagnostic_rendering.py": "1d486dc98fb3195aca4b876ff8dd1113bba1b55f12e05cf9ef05d32971525d1c",
+    "diagnostic_fixed_skill.py": "c6a83a609f5ec6e91a51ee6d6983b4581f4b7d7baaaf10b4b2c9408aef80597d",
+    "nash_skills/skills.py": "9f722f480f5b6b9c5e1f9b7838c8c3cc063028eb5c9bcf7e3aced28100b538c3",
+    "nash_skills/env_wrapper.py": "b59e347de0b09027ec840f2c457c2c6c71ac767bc2e912f48d37e07d123a49d9"
+  },
+  "target_names": [
+    "left",
+    "left_short",
+    "center_safe",
+    "right_short",
+    "right"
+  ],
+  "return_targets": [
+    [
+      2.185,
+      -0.38,
+      0.5820000000000001
+    ],
+    [
+      1.95,
+      -0.38,
+      0.5820000000000001
+    ],
+    [
+      2.0,
+      0.0,
+      0.5820000000000001
+    ],
+    [
+      1.95,
+      0.38,
+      0.5820000000000001
+    ],
+    [
+      2.185,
+      0.38,
+      0.5820000000000001
+    ]
+  ],
+  "preparation_examples": [
+    [
+      3.5,
+      -0.65,
+      0.015
+    ],
+    [
+      3.5,
+      0.0,
+      0.015
+    ],
+    [
+      3.5,
+      0.65,
+      0.015
+    ]
+  ],
+  "preparation_markers_are_schematic": true,
+  "commanded_gantry_limits": [
+    [
+      -1.2,
+      -0.3
+    ],
+    [
+      -1.0,
+      1.0
+    ]
+  ],
+  "ball_position": [
+    1.2529180446915686,
+    -0.18757975120152076,
+    1.0155450000000004
+  ],
+  "ball_velocity": [
+    4.5,
+    -0.8697979744354568,
+    -1.2373
+  ],
+  "velocity_display_time_scale": 0.14,
+  "camera_name": "overview"
+}
