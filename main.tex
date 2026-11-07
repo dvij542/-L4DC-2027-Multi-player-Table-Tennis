@@ -336,7 +336,7 @@ We also learn strategic policies by self-play, building on hierarchical table te
 Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. Unlike the compact continuation mixtures in Equation~\eqref{eq:compacttheta}, this policy can condition its strategic probabilities on each new state; this difference in policy representation is included when interpreting comparisons.
 
 \paragraph{Training objective and opponent updates.}
-Train each player to maximize its discounted point utility using proximal REINFORCE algorithm \citep{} 
+Train each player to maximize its discounted point utility using REINFORCE algorithm \citep{}.
 % Are we just using REINFORCE with Baseline here instead of PPO?
 Alternate learner updates while holding the opponent fixed within an update round. Maintain a pool of frozen opponent snapshots and sample an opponent at the beginning of each rally, retaining that snapshot for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. An unfinished training rollout is bootstrapped from its critic rather than treated as a lost point.
 
