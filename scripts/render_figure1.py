@@ -299,7 +299,7 @@ def main():
             ax.add_patch(Circle(xy, 17, fc="#f3c45e", ec="#895b0d", lw=1, zorder=8))
             ax.text(*xy, str(index), fontsize=9, weight="bold", ha="center", va="center", color="#4c3509", zorder=9)
         # Only the center ready position is defined in the supplied source.
-        # Outer lateral positions are schematic examples, explicitly captioned.
+        # Outer lateral positions are display examples, documented in the README.
         from mujoco_env_comp import READY_GANTRY_X
         prep_x = float(m.body_pos[m.body("base_opp").id, 0] - READY_GANTRY_X)
         preps = [(prep_x, y, 0.015) for y in (-0.65, 0.0, 0.65)]
@@ -338,7 +338,7 @@ def main():
         label("Gantry movable region", (335, 1010), [-1.15, -0.8, 0.006], blue)
         label("Gantry movable region", (2060, 1010), [4.15, -0.8, 0.006], blue)
         label(r"Return choices $k_1,\ldots,k_5$", (1370, 825), [2.30, -0.10, top + 0.002], gold)
-        label("Preparation positions\n(schematic)", (2000, 820), preps[0], green)
+        label("Preparation positions", (2000, 820), preps[0], green)
         fig.savefig(output, dpi=240, facecolor="white", bbox_inches="tight", pad_inches=0.04)
         fig.savefig(output.with_suffix(".pdf"), facecolor="white", bbox_inches="tight", pad_inches=0.04)
         plt.close(fig)
