@@ -119,6 +119,9 @@ def main():
                   texuniform="true", texrepeat="0.5 0.5", reflectance="0.0", specular="0.10", shininess="0.1")
     scene.find(".//geom[@name='floor']").set("material", "figure_floor_material")
     scene.find(".//geom[@name='floor']").set("size", "200 200 0.1")
+    ET.SubElement(assets, "material", name="figure_ball_material", rgba="1 0.58 0.08 1",
+                  specular="0.75", shininess="0.65", reflectance="0")
+    scene.find(".//geom[@name='ball_geom']").set("material", "figure_ball_material")
     # Display-only table detailing: all geoms are static and non-colliding.
     world = scene.find("worldbody")
     def display_geom(name, kind, **attributes):
@@ -198,6 +201,12 @@ def main():
             raise ValueError("Snapshot profile does not match --skill-profile; capture a new snapshot for that profile")
         m, d = env.model, env.data
         d.qpos[:] = state["qpos"]
+        # Pull both bases back from the fixed target poses to illustrate approach.
+        source_gantry_positions = d.qpos[[0, 1, 9, 10]].copy()
+        approach_offset = 0.22
+        x_command_limits, _ = commanded_gantry_limits(source)
+        for index in (0, 9):
+            d.qpos[index] = np.clip(d.qpos[index] - approach_offset, *x_command_limits)
         d.qvel[:] = state["qvel"]
         d.ctrl[:] = state["ctrl"]
         d.time = float(state["time"])
@@ -212,6 +221,11 @@ def main():
             m.geom_size[m.geom(racket_name).id, 1] = 0.006
         for target_name in ("cylinder", "cylinder_opp"):
             m.geom_size[m.geom(target_name).id, 1] = 0.005
+            m.geom_rgba[m.geom(target_name).id, 3] = 0.48
+        # Keep the ball as a truly shaded MuJoCo sphere; enlarge for print legibility.
+        ball_source_radius = float(m.geom_size[m.geom("ball_geom").id, 0])
+        ball_display_radius = 0.04
+        m.geom_size[m.geom("ball_geom").id, 0] = ball_display_radius
         # Directional key light and restrained fill preserve 3-D shape and
         # floor shadows instead of flattening the scene with ambient light.
         m.geom_rgba[m.geom("floor").id] = [1, 1, 1, 1]
@@ -221,6 +235,8 @@ def main():
         m.vis.headlight.specular[:] = 0.10
         m.vis.quality.shadowsize = 8192
         m.vis.quality.offsamples = 8
+        m.vis.quality.numslices = 48
+        m.vis.quality.numstacks = 32
         m.stat.center[:] = [table_x, 0, 0.55]
         m.stat.extent = 6.0
         m.light_pos[:] = [[-1.5, -3.0, 6.0], [4.5, 3.0, 6.0]]
@@ -269,6 +285,14 @@ def main():
         source_targets = np.array([(*world_target_xy(1, skill, profile=args.skill_profile), top + 0.002)
                                    for skill in SKILL_NAMES])
         targets = source_targets.copy()
+        # Place the four display targets close to the right-half corners.
+        near_x = table_x + 0.14
+        far_x = table_x + table_size[0] - 0.14
+        lateral = table_size[1] - 0.10
+        targets[0, :2] = [far_x, -lateral]
+        targets[1, :2] = [near_x, -lateral]
+        targets[3, :2] = [near_x, lateral]
+        targets[4, :2] = [far_x, lateral]
         targets[2] = targets[[0, 1, 3, 4]].mean(axis=0)
         for index, p in enumerate(targets, 1):
             xy = project(p)
@@ -283,12 +307,22 @@ def main():
             xy = project(p)
             ax.add_patch(Circle(xy, 23, fc="#edf7f1", ec=green, lw=1.4, zorder=8))
             ax.text(*xy, rf"$m_{index}$", fontsize=10, ha="center", va="center", color=green, zorder=9)
+        # Dashed arrows clarify that the real rackets have not reached their targets.
+        approach_gaps = {}
+        for actual_name, target_name in (("racket", "cylinder"), ("racket_opp", "cylinder_opp")):
+            actual = d.geom(actual_name).xpos.copy()
+            target = d.geom(target_name).xpos.copy()
+            approach_gaps[actual_name] = float(np.linalg.norm(target - actual))
+            ax.add_patch(FancyArrowPatch(project(actual), project(target), arrowstyle="-|>",
+                                        mutation_scale=11, color=green, lw=1.3, linestyle=(0, (3, 2)),
+                                        shrinkA=12, shrinkB=12, zorder=11))
         ball = d.geom("ball_geom").xpos.copy()
         velocity = d.qvel[m.jnt_dofadr[m.joint("haha").id]:][:3].copy()
-        velocity_tip = ball + 0.14 * velocity
-        ax.add_patch(FancyArrowPatch(project(ball), project(velocity_tip), arrowstyle="-|>",
-                                    mutation_scale=18, color="#d18110", lw=2, zorder=11))
-        ax.add_patch(Circle(project(ball), 6, fc="#ffb02e", ec="#78530b", lw=0.7, zorder=12))
+        velocity_display_scale = 0.05
+        velocity_tip = ball + velocity_display_scale * velocity
+        arrow_start = ball + 1.15 * ball_display_radius * velocity / np.linalg.norm(velocity)
+        ax.add_patch(FancyArrowPatch(project(arrow_start), project(velocity_tip), arrowstyle="-|>",
+                                    mutation_scale=13, color="#d18110", lw=1.6, zorder=11))
 
         def label(text, at, point, color=ink):
             ax.annotate(text, xy=project(point), xytext=at, ha="center", va="center", fontsize=13,
@@ -299,8 +333,8 @@ def main():
         label("KUKA iiwa + mounted racket", (2050, 55), d.geom("racket_opp").xpos)
         label("Target racket pose", (355, 470), d.geom("cylinder").xpos, green)
         label("Target racket pose", (2050, 470), d.geom("cylinder_opp").xpos, green)
-        label("Ball", (985, 100), ball, gold)
-        label(r"Ball velocity $\mathbf{v}^{b}$", (750, 165), ball + 0.075 * velocity, gold)
+        label("Ball", (985, 100), ball + up * ball_display_radius * 1.2, gold)
+        label(r"Ball velocity $\mathbf{v}^{b}$", (750, 165), ball + 0.03 * velocity, gold)
         label("Gantry movable region", (335, 1010), [-1.15, -0.8, 0.006], blue)
         label("Gantry movable region", (2060, 1010), [4.15, -0.8, 0.006], blue)
         label(r"Return choices $k_1,\ldots,k_5$", (1370, 825), [2.30, -0.10, top + 0.002], gold)
@@ -319,12 +353,21 @@ def main():
             "target_names": SKILL_NAMES, "return_targets": targets.tolist(),
             "source_return_targets": source_targets.tolist(),
             "center_target_adjusted_for_illustration": True,
-            "display_refinements": ["four table legs and braces", "mesh net with posts and bands", "12 mm racket thickness"],
+            "outer_targets_adjusted_for_illustration": True,
+            "source_gantry_positions": source_gantry_positions.tolist(),
+            "display_gantry_positions": d.qpos[[0, 1, 9, 10]].tolist(),
+            "approach_offset_m": approach_offset, "racket_target_gaps_m": approach_gaps,
+            "ball_display_radius_m": ball_display_radius,
+            "ball_source_radius_m": ball_source_radius,
+            "ball_is_native_3d_sphere": True,
+            "display_refinements": ["four table legs and braces", "mesh net with posts and bands",
+                                    "12 mm racket thickness", "gantry approach offsets", "corner target layout",
+                                    "enlarged shaded 3D ball"],
             "camera_position": eye.tolist(), "racket_display_thickness_m": 0.012,
             "preparation_examples": preps,
             "preparation_markers_are_schematic": True, "commanded_gantry_limits": [xlim, ylim],
             "ball_position": ball.tolist(), "ball_velocity": velocity.tolist(),
-            "velocity_display_time_scale": 0.14, "camera_name": "overview",
+            "velocity_display_time_scale": velocity_display_scale, "camera_name": "overview",
         }
         output.with_suffix(".json").write_text(json.dumps(metadata, indent=2))
         print("Saved", output, "using supplied SkillEnv.render(mode='rgb_array')")

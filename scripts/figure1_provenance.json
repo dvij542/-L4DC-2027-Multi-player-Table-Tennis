@@ -23,28 +23,28 @@
   ],
   "return_targets": [
     [
-      2.5,
-      -0.646,
+      2.73,
+      -0.6625,
       0.5820000000000001
     ],
     [
-      1.9,
-      -0.646,
+      1.6400000000000001,
+      -0.6625,
       0.5820000000000001
     ],
     [
-      2.2,
+      2.185,
       0.0,
       0.5820000000000001
     ],
     [
-      1.9,
-      0.646,
+      1.6400000000000001,
+      0.6625,
       0.5820000000000001
     ],
     [
-      2.5,
-      0.646,
+      2.73,
+      0.6625,
       0.5820000000000001
     ]
   ],
@@ -76,10 +76,34 @@
     ]
   ],
   "center_target_adjusted_for_illustration": true,
+  "outer_targets_adjusted_for_illustration": true,
+  "source_gantry_positions": [
+    -0.7368130835042237,
+    -0.5768427026247088,
+    -0.5937812896187601,
+    -0.32288133145698694
+  ],
+  "display_gantry_positions": [
+    -0.9568130835042237,
+    -0.5768427026247088,
+    -0.8137812896187601,
+    -0.32288133145698694
+  ],
+  "approach_offset_m": 0.22,
+  "racket_target_gaps_m": {
+    "racket": 0.21266889366033373,
+    "racket_opp": 0.21954956617137333
+  },
+  "ball_display_radius_m": 0.04,
+  "ball_source_radius_m": 0.02,
+  "ball_is_native_3d_sphere": true,
   "display_refinements": [
     "four table legs and braces",
     "mesh net with posts and bands",
-    "12 mm racket thickness"
+    "12 mm racket thickness",
+    "gantry approach offsets",
+    "corner target layout",
+    "enlarged shaded 3D ball"
   ],
   "camera_position": [
     0.6499999761581421,
@@ -125,6 +149,6 @@
     -2.0034037474854998,
     -2.004020674548634
   ],
-  "velocity_display_time_scale": 0.14,
+  "velocity_display_time_scale": 0.05,
   "camera_name": "overview"
 }
