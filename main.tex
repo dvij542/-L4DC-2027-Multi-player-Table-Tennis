@@ -148,8 +148,8 @@ For singles table tennis, $\Players=\{1,2\}$. The attacker and defender are role
 
 \begin{figure}[tbp]
 \centering
-\figureplaceholder{MuJoCo scene with two gantry-mounted KUKA iiwa arms, rackets, table, and ball.}
-\caption{Robot table tennis environment. Placeholder for the simulator overview.}
+\figureplaceholder{MuJoCo scene with two gantry-mounted KUKA iiwa arms, rackets, table, and ball, annotated with five indexed return targets and three indexed preparation positions.}
+\caption{Robot table tennis environment and strategic action geometry. Placeholder for the simulator overview with return targets and preparation configurations marked in table coordinates.}
 \label{fig:environment}
 \end{figure}
 
@@ -174,14 +174,7 @@ Let $\mathcal{K}=\{1,\ldots,5\}$ index the return targets and $\mathcal{M}=\{1,2
 \end{equation}
 % what my code does is - every player's actual action set, every exchange, is the full product $\mathcal{K}\times\mathcal{M}$ — never role-gated down to just one factor. Or are we talking about Kexin's design that alternating attacker/defender here?
 % Dvij: Yes correct, that is an implementation detail and I think that is fine, fundamentally what I am describing here is how the environment evolves and for that only K for attacker and M for defender matters
-Both choices use the physical state available at the exchange boundary. The defender does not receive the attacker's newly selected target before choosing its preparation action. Subsequent low-level control can react to observed ball motion. This timing models preparation under uncertainty about the next shot, rather than granting the defender advance knowledge of its destination. Figure~\ref{fig:strategicpositions} is reserved for the attack-target and preparation-position geometry.
-
-\begin{figure}[tbp]
-\centering
-\figureplaceholder{Table-coordinate diagram with five indexed return targets and three indexed preparation positions.}
-\caption{Strategic action geometry. Placeholder for the target coordinates and preparation configurations.}
-\label{fig:strategicpositions}
-\end{figure}
+Both choices use the physical state available at the exchange boundary. The defender does not receive the attacker's newly selected target before choosing its preparation action. Subsequent low-level control can react to observed ball motion. This timing models preparation under uncertainty about the next shot, rather than granting the defender advance knowledge of its destination. Figure~\ref{fig:environment} is reserved for the environment overview and the attack-target and preparation-position geometry.
 
 \paragraph{Physical execution and transition dynamics.}
 Fixed execution controllers translate strategic targets into state-feedback robot commands. An attack controller $\kappa^{\attack,i}$ attempts to return the incoming ball toward the selected landing target; a preparation controller $\kappa^{\defend,i}$ moves the robot toward the selected ready configuration. Appendix~\ref{app:execution} is reserved for the low-level controller implementation details. MuJoCo advances the robot and ball dynamics, including the modeled table, net, and racket interactions \citep{todorov2012mujoco}. Together, the execution controllers and simulation define
