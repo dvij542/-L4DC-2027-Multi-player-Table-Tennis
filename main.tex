@@ -1,6 +1,7 @@
 % The jmlr pmlr option provides the L4DC format.
 % References are maintained in references.bib.
 \documentclass[pmlr]{jmlr}
+\usepackage[T1]{fontenc}
 \usepackage{times}
 \usepackage{amsmath,amssymb,booktabs}
 \usepackage{afterpage}
@@ -225,7 +226,13 @@ then $\theta^*$ is an $(\alpha+\lambda)$-Nash equilibrium at $x$ within the chos
 Appendix~\ref{app:potentialproof} gives the proof.
 
 \paragraph{Offline phase: value estimation.}
-We collect rallies with randomly selected skills at each exchange and estimate returns conditioned on the current state and first-exchange action pair. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ for each player. Training and evaluation use disjoint rallies. Appendix~\ref{app:valuelearning} details the rollout targets and truncation bound.
+We generate continuations from diverse exchange states and first-exchange profiles using Equation~\eqref{eq:firstexchangepolicy}. For continuation length $H$, each rollout provides
+\begin{equation}
+  G_H^i=\sum_{h=0}^{H-1}\gamma^h
+  r^i(x_h,a_h,x_{h+1}),
+  \label{eq:rolloutreturn}
+\end{equation}
+with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $\gamma<1$ and $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
 
 \paragraph{Offline phase: potential learning.}
 We represent $\Phi_\varphi(x,\theta)$ with a feed-forward neural network and construct unilateral-deviation samples $\mathcal{S}$ with entries $(x,i,\theta,\theta^{i\prime})$. We define the residual as
@@ -267,7 +274,11 @@ We also learn strategic policies through self-play using PPO with a learned valu
 \end{equation}
 Here $\Delta_d$ is the probability simplex over $d$ actions. The active role determines which distribution selects the action. The actor uses the same physical observations and execution controllers as the potential planner, while conditioning its action probabilities on each new state.
 
-We alternate learner updates against opponents sampled from a pool of frozen snapshots, holding the opponent fixed throughout each rally. We freeze the trained policies for evaluation and compare sampled actions with deterministic argmax selection. Appendix~\ref{app:selfplay} details critic targets and opponent updates.
+\paragraph{Training objective and opponent updates.}
+We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
+We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
+
+We freeze the trained policies for evaluation and compare sampled actions with deterministic argmax selection. Appendix~\ref{app:selfplay} relates the neural actor to the potential planner's rollout policy.
 
 \section{Results}
 \label{sec:results}
@@ -314,7 +325,7 @@ Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 77.0\% & --- & -- & 50.0\%\\
 \end{table}
 
 \paragraph{Unilateral improvement.}
-For a frozen profile $\pi=(\pi^1,\pi^2)$, we define the state-dependent unilateral-deviation regret of player $i$ as
+For a frozen profile $\pi=(\pi^1,\pi^2)$, player $i$'s unilateral-deviation regret is
 \begin{equation}
   \mathcal{R}_i(x;\pi)=
   \sup_{\widetilde\pi^i\in\Pi^i_{\mathrm{eval}}}
@@ -346,7 +357,7 @@ Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
 Figure~\ref{fig:datavolume} shows success rates as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
 
 \paragraph{Discount factor and effective horizon.}
-Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-potential. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
+Figure~\ref{fig:discountfactor} shows the discount-factor sweep for $\alpha$-potential. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
@@ -368,7 +379,10 @@ Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-p
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
-We compare human returns reconstructed by LATTE-MV \citep{etaat2025latte} with simulated returns in a shared table frame, using five return regions and nine attacker--opponent position contexts. Pearson correlation and Jensen--Shannon divergence measure agreement between conditional landing distributions. Appendix~\ref{app:humananalysis} details processing; Table~\ref{tab:humancorrelation} presents the comparison.
+We compare learned strategies with human gameplay reconstructed from monocular videos using LATTE-MV \citep{etaat2025latte}.
+
+\paragraph{Position-conditioned return heatmaps.}
+We extract player locations, racket-contact events, and returned-ball landing locations from human table tennis videos, using calibrated table coordinates and exchange segmentation \citep{etaat2025latte,voeikov2020ttnet}. We mark exchanges at net crossings and express them in a common attacker-oriented frame so that left and right have the same meaning across players, videos, and simulation. At the matched net-crossing decision epoch, we assign the attacker and opponent to lateral bins $s^{\attack},s^{\defend}\in\{L,C,R\}$. We analyze all nine position combinations, including attacker-left/opponent-left and attacker-left/opponent-right. We assign valid first-bounce locations on the opponent's half to the five return regions using a fixed coordinate partition. Appendix~\ref{app:humananalysis} details distribution construction; Table~\ref{tab:humancorrelation} presents the human--model comparison.
 
 % Flush main-text floats before the references.
 \clearpage
@@ -394,33 +408,18 @@ For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alp
 \label{app:valuelearning}
 Random skill selection at every exchange produces the data for this family. For a state $x$ sampled at a net crossing, its realized attack and preparation choices define $\theta$, and the remaining trajectory follows the random continuation rule. Returns conditioned on $(x,\theta)$ provide value targets, with additional continuations estimating the expected return for alternative initial choices.
 
-We generate continuations from diverse exchange states and first-exchange profiles using Equation~\eqref{eq:firstexchangepolicy}. For continuation length $H$, each rollout provides
-\begin{equation}
-  G_H^i=\sum_{h=0}^{H-1}\gamma^h
-  r^i(x_h,a_h,x_{h+1}),
-  \label{eq:rolloutreturn}
-\end{equation}
-with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $\gamma<1$ and $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
+The rollout targets in Equation~\eqref{eq:rolloutreturn} use this shared continuation rule. The data split by rally keeps correlated exchanges within the same training or evaluation partition.
 
 \section{Self-Play RL Training}
 \label{app:selfplay}
 Only the actor head in Equation~\eqref{eq:rlheads} corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. The actor conditions its strategic probabilities on each new state throughout the rally. In contrast, Equation~\eqref{eq:firstexchangepolicy} evaluates an initial action followed by random continuation; the deployed potential planner recomputes that initial action at every exchange.
-
-\paragraph{Training objective and opponent updates.}
-We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
-We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
 
 \paragraph{Evaluation and equilibrium interpretation.}
 We freeze the trained actor parameters for evaluation and assess their equilibrium quality through unilateral response gains against the frozen policies.
 
 \section{Human-Play Processing and Position-Conditioned Comparison}
 \label{app:humananalysis}
-We finally compare the learned strategies from this formulation with human expert gameplay data. We use LATTE-MV \citep{etaat2025latte}, which reconstructs human play from monocular videos.
-
-\paragraph{Position-conditioned return heatmaps.}
-We extract player locations, racket-contact events, and returned-ball landing locations from human table tennis videos, using calibrated table coordinates and exchange segmentation \citep{etaat2025latte,voeikov2020ttnet}. We mark exchanges at net crossings and express them in a common attacker-oriented frame so that left and right have the same meaning across players, videos, and simulation. At the matched net-crossing decision epoch, we assign the attacker and opponent to lateral bins $s^{\attack},s^{\defend}\in\{L,C,R\}$. We analyze all nine position combinations, including attacker-left/opponent-left and attacker-left/opponent-right. The comparison uses the same coordinate convention and decision phase for human and simulated play.
-
-We map valid first-bounce locations on the opponent's half to the same five target regions, using a fixed partition defined by the target coordinates. For each context $s=(s^{\attack},s^{\defend})$, we estimate
+For each context $s=(s^{\attack},s^{\defend})$, we estimate
 \begin{equation}
   h_{\mathrm{human}}(k\mid s)=
   \frac{n_{\mathrm{human}}(k,s)}
