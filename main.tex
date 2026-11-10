@@ -106,7 +106,7 @@ We consider a dynamic game with player set $\Players=\{1,\ldots,N\}$. At strateg
   x_{t+1}\sim P(\cdot\mid x_t,a_t),
   \label{eq:transition}
 \end{equation}
-which includes the physical execution of the selected actions. Player $i$ receives a bounded utility $r^i(x_t,a_t,x_{t+1})$. A stationary state-feedback policy $\pi^i(\cdot\mid x;\theta^i)$ maps the state to a distribution over actions, where $\theta^i\in\Theta^i$ parameterizes an admissible policy family. We write $\Theta=\prod_{i\in\Players}\Theta^i$, $\theta=(\theta^i)_{i\in\Players}$, and $\theta^{-i}$ for the parameters of every player except $i$.
+which includes the physical execution of the selected actions. Player $i$ receives a bounded utility $r^i(x_t,a_t,x_{t+1})$. A state-feedback policy $\pi_h^i(\cdot\mid x;\theta^i)$ maps the state to a distribution over actions at rollout exchange $h$, where $\theta^i\in\Theta^i$ parameterizes an admissible policy family. We write $\Theta=\prod_{i\in\Players}\Theta^i$, $\theta=(\theta^i)_{i\in\Players}$, and $\theta^{-i}$ for the parameters of every player except $i$.
 
 For discount factor $\gamma\in[0,1)$, the value of player $i$ from initial state $x$ is
 \begin{equation}
@@ -115,7 +115,7 @@ For discount factor $\gamma\in[0,1)$, the value of player $i$ from initial state
   \gamma^t r^i(x_t,a_t,x_{t+1})\,\middle|\,x_0=x\right].
   \label{eq:value}
 \end{equation}
-The expectation accounts for policy randomization and transition uncertainty. The policy parameters in this definition are fixed throughout the evaluated continuation of the game; the policies themselves remain state dependent. A terminal state is absorbing and has zero subsequent utility, so a finite rally is included in this notation.
+The expectation accounts for policy randomization and transition uncertainty. The parameters specify the complete evaluated policy, including its first-exchange action and subsequent continuation rule. Policies can depend on the state and the rollout exchange index. A terminal state is absorbing and has zero subsequent utility, so a finite rally is included in this notation.
 
 \begin{definition}[$\epsilon$-Nash equilibrium at an initial state]
 For $x\in\States$ and $\epsilon\geq0$, a joint policy parameter $\theta^*\in\Theta$ is an $\epsilon$-Nash equilibrium at $x$ if
@@ -128,7 +128,7 @@ For $x\in\States$ and $\epsilon\geq0$, a joint policy parameter $\theta^*\in\The
 When $\epsilon=0$, the profile is a Nash equilibrium at $x$.
 \end{definition}
 
-If Equation~\eqref{eq:nash} holds for every admissible initial state, the profile is a stationary $\epsilon$-Nash equilibrium over those states. Throughout, deviations are taken within the specified policy families. Thus, equilibrium quality concerns the modeled strategic choices and their execution, rather than every possible joint-level robot policy.
+If Equation~\eqref{eq:nash} holds for every admissible initial state, the profile is an $\epsilon$-Nash equilibrium over those states within the specified policy family. Throughout, deviations are taken within the specified policy families. Thus, equilibrium quality concerns the modeled strategic choices and their execution, rather than every possible joint-level robot policy.
 
 \subsection{Robot Table Tennis as an Attacker--Defender Game}
 \label{sec:game}
@@ -173,9 +173,9 @@ For a point-based competitive objective, we define
 \end{equation}
 The utility is zero while the rally continues, and $r^1=-r^2$ for a resolved point. Equation~\eqref{eq:value} then values the discounted point outcome over the continuation of the rally. A discount below one gives greater weight to earlier outcomes; it is a modeling choice rather than the official scoring rule. The competitive objective rewards winning points, while legal return execution and preparation enter through the transition dynamics.
 
-\paragraph{Policy parameterization.} \label{sec:polcy_param}
-Each player has an attack component and a defense component, $\theta^i=(\theta^{\attack,i},\theta^{\defend,i})$.
-A complete strategy specifies both components because each player repeatedly occupies both roles. During each exchange, the attacker player $i$ chooses action $\Actions^i(x_t) = f_{\theta^{A,i}}(x_t)$, and the defender player $-i$ chooses action $\Actions^{-i}(x_t) = f_{\theta^{D,-i}}(x_t)$. The same target sets, preparation sets, and execution controllers provide the action interface for potential-based planning and self-play reinforcement learning. For self-play the functions $f_{\theta^{A,i}}$ and $f_{\theta^{D,i}}$ are represented by neural network with policy parameters $\theta^{A,i}$ and $\theta^{D,i}$. However, for $\alpha$-Potential formulation, we approximate the interaction as follows:- For the attacker role, choose $\theta^{A,i} \in \mathcal{K}$ and $\theta^{D,-i} \in \mathcal{M}$. For the first exchange, the attacker plays the chosen return choice and for the subsequent interactions, choose random return choice and preparation positions. Similarly, the defender plays the chosen preparation position represented by the policy parameter $\theta^{D,-i}$ and then choose random return choice and preparation position. With this parameterization, we can still train the potential function on collected data by randomly choosing skill at each exchange as described in further sections.
+\paragraph{Policy parameterization.}
+\label{sec:policy_param}
+A complete strategy specifies attack and defense behavior because each player occupies both roles. Self-play RL represents these behaviors with neural categorical policies. For $\alpha$-potential planning, the parameters specify only the current attack target and preparation position; both players follow a common random continuation policy in subsequent rollout exchanges. The same targets, preparation positions, and execution controllers are used by both methods.
 
 \section{Approximating Multi-agent Interaction}
 \label{sec:approximation}
@@ -185,14 +185,13 @@ We develop two approaches to strategic play in the attacker--defender game: appr
 \subsection{$\alpha$-Potential Function: Offline Learning and Online Optimization}
 \label{sec:potential}
 
-Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024dynamic,kalaria2025racer}, we seek a scalar function that tracks the effect of changing one player's strategy. We parameterize the policy of the agent as using an attack target from $\mathcal{K}$ for attacker and a preparation position from $\mathcal{M}$, for the first exchange followed by random choice of attack target and preparation position for subsequent exchanges as described in Section \ref{sec:polcy_param}. Mathematically:-
-
+Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024dynamic,kalaria2025racer}, we learn a scalar function that tracks unilateral value changes. At initial state $x$, let $\iota_0$ and $\jmath_0$ denote the attacker and defender. Their parameter sets are $\Theta^{\iota_0}=\mathcal{K}$ and $\Theta^{\jmath_0}=\mathcal{M}$. In role order, the joint parameter is
 \begin{equation}
-  \theta=(w^{\attack,i},w^{\defend,-i})\in\mathcal{K}\times\mathcal{M}.
+  \theta=(w^{\attack,\iota_0},w^{\defend,\jmath_0})
+  \in\Theta=\mathcal{K}\times\mathcal{M}.
   \label{eq:compacttheta}
 \end{equation}
-The tuple specifies one choice from each set, giving fifteen joint policies in total where the attacker has $5$ choices and defender $3$. For data collection, the attack and defense positions are chosen randomly consistent with the policy parameterization scheme, while the execution controllers react to the physical state. 
-% The online solver can update the selections at each new exchange state.
+The two components specify the first exchange, giving $5\times3=15$ joint profiles. Subsequent attack and preparation choices are random and use the same continuation rule for every candidate profile. For each fixed initial state, unilateral deviations change only that player's first-exchange choice. Appendix~\ref{app:valuelearning} formalizes the rollout policy and data collection.
 
 \begin{definition}[Dynamic $\alpha$-potential function]
 A function $\Phi:\States\times\Theta\to\R$ is an $\alpha$-potential function for the chosen policy family if, for every $x\in\States$, $i\in\Players$, $\theta\in\Theta$, and alternative $\theta^{i\prime}\in\Theta^i$,
@@ -217,7 +216,7 @@ then $\theta^*$ is an $(\alpha+\lambda)$-Nash equilibrium at $x$ within the chos
 Appendix~\ref{app:potentialproof} gives the proof.
 
 \paragraph{Offline phase: value estimation.}
-We estimate continuation returns from simulated rallies and fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ for each player. Training and evaluation use disjoint rallies. Appendix~\ref{app:valuelearning} details the rollout targets and truncation bound.
+We collect rallies with randomly selected skills at each exchange and estimate returns conditioned on the current state and first-exchange action pair. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ for each player. Training and evaluation use disjoint rallies. Appendix~\ref{app:valuelearning} details the rollout targets and truncation bound.
 
 \paragraph{Offline phase: potential learning.}
 We represent $\Phi_\varphi(x,\theta)$ with a feed-forward neural network and construct unilateral-deviation samples $\mathcal{S}$ with entries $(x,i,\theta,\theta^{i\prime})$. We define the residual as
@@ -246,7 +245,7 @@ Given exchange state $x_t$, we optimize the learned function over the joint disc
   \operatorname*{arg\,max}_{\theta\in\Theta}\Phi_\varphi(x_t,\theta).
   \label{eq:onlinepotential}
 \end{equation}
-At each exchange, we evaluate candidate joint parameters from $\Theta=(\mathcal{K}\times\mathcal{M})$ and select the candidate with the largest value of $\Phi_\varphi(x_t,\theta)$. The joint parameter space contains $15$ profiles. Each robot executes the component corresponding to its current role. Proposition~\ref{prop:potential} applies subject to the potential error and the optimization gap over this joint space.
+At each exchange, we evaluate all fifteen profiles in $\Theta=\mathcal{K}\times\mathcal{M}$ and select the one with the largest potential value. The attacker executes its target and the defender its preparation choice. At the next exchange, the solver optimizes a new pair. Proposition~\ref{prop:potential} applies to the first-exchange policy family with its fixed random continuation.
 Against a baseline opponent, the opponent retains its own policy. The feedback policy obtained by repeatedly optimizing at successive exchanges is assessed separately through best-response tests.
 
 \subsection{Self-Play Reinforcement Learning}
@@ -276,7 +275,7 @@ The static family contains every combination of a fixed attack target and a fixe
 \end{equation}
 Each pairing defines a complete policy across both roles. The random baseline independently samples uniformly among the five attack targets and among the three preparation positions at each relevant decision.
 
-Iterated best response (IBR) alternates updates of each player's attack and defense parameters to maximize its value $V^i$ against the other's current strategy \citep{spica2020drone}. At a given state, we use simulated returns over horizon $H_{\mathrm{IBR}} = 5$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}.
+Iterated best response (IBR) alternates unilateral updates of the attack and preparation choices against the opponent's current strategy \citep{spica2020drone}. Simulated returns over horizon $H_{\mathrm{IBR}}=5$ evaluate each candidate response.
 
 The $\alpha$-potential planner selects strategic actions by optimizing the learned potential function, as described in Section~\ref{sec:approximation}.
 
@@ -367,7 +366,7 @@ Human and robot exchanges share a table coordinate frame, five return regions, a
 \appendix
 \section{Proof of the Equilibrium Approximation}
 \label{app:potentialproof}
-We prove Proposition~\ref{prop:potential} for the policy family of Section~\ref{sec:potential}.
+We prove Proposition~\ref{prop:potential} for the first-exchange policy family of Section~\ref{sec:potential}. The initial roles and random continuation rule are fixed while each player varies its initial action.
 \begin{proof}
 For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alphapotential} gives
 \begin{align*}
@@ -377,15 +376,28 @@ For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alp
 \end{align*}
 \end{proof}
 
-\section{Value Estimation and Rollout Truncation}
+\section{First-Exchange Policies, Value Estimation, and Rollout Truncation}
 \label{app:valuelearning}
-We generate simulated continuations from diverse exchange states and joint strategy parameters. For continuation length $H$, each rollout provides
+For a rollout initialized at $x_0=x$, we index exchanges by $h=0,1,\ldots$. The current attacker has parameter $\theta^{\iota_0}=w^{\attack,\iota_0}\in\mathcal{K}$ and the current defender has parameter $\theta^{\jmath_0}=w^{\defend,\jmath_0}\in\mathcal{M}$. Let $\mu^i(\cdot\mid x_h)$ denote the common random continuation policy, with support on the action set corresponding to player $i$'s role at $x_h$. The evaluated policy is
+\begin{equation}
+  \pi_h^i(\cdot\mid x_h;\theta^i)=
+  \begin{cases}
+    \delta_{\theta^i}, & h=0,\\
+    \mu^i(\cdot\mid x_h), & h\geq1,
+  \end{cases}
+  \label{eq:firstexchangepolicy}
+\end{equation}
+where $\delta_{\theta^i}$ assigns probability one to the selected initial action. Role switching determines whether later random actions select return targets or preparation positions. The continuation rule is unchanged across candidate profiles and unilateral deviations. The parameters therefore identify the first-exchange pair, rather than fixed target and preparation choices throughout the rally. The online planner applies this evaluation anew at each exchange.
+
+Random skill selection at every exchange produces the data for this family. For a sampled state $x$, its realized attack and preparation choices define $\theta$, and the remaining trajectory follows the random continuation rule. Returns conditioned on $(x,\theta)$ provide value targets, with additional continuations estimating the expected return for alternative initial choices.
+
+We generate continuations from diverse exchange states and first-exchange profiles using Equation~\eqref{eq:firstexchangepolicy}. For continuation length $H$, each rollout provides
 \begin{equation}
   G_H^i=\sum_{h=0}^{H-1}\gamma^h
   r^i(x_h,a_h,x_{h+1}),
   \label{eq:rolloutreturn}
 \end{equation}
-with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
+with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $\gamma<1$ and $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
 
 \section{Self-Play RL Training}
 \label{app:selfplay}
@@ -395,7 +407,7 @@ We also learn strategic policies by self-play, building on hierarchical table te
   \qquad p_{\psi_i}^{\defend}(\cdot\mid x_t)\in\Delta_3.
   \label{eq:rlheads}
 \end{equation}
-Here $\Delta_d=\{p\in\R_{\geq0}^d:\sum_{j=1}^{d}p_j=1\}$ is the probability simplex. Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. Unlike the fixed-target continuation policies in Equation~\eqref{eq:compacttheta}, this policy can condition its strategic probabilities on each new state; this difference in policy representation is included when interpreting comparisons.
+Here $\Delta_d=\{p\in\R_{\geq0}^d:\sum_{j=1}^{d}p_j=1\}$ is the probability simplex. Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. The actor conditions its strategic probabilities on each new state throughout the rally. In contrast, Equation~\eqref{eq:firstexchangepolicy} evaluates an initial action followed by random continuation; the deployed potential planner recomputes that initial action at every exchange.
 
 \paragraph{Training objective and opponent updates.}
 We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
