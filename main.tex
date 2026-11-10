@@ -382,21 +382,26 @@ Self-play RL & \TBD & \TBD\\
 \paragraph{Training-data volume.}
 Figure~\ref{fig:datavolume} shows success rates as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
 
-\begin{figure}[tbp]
-\centering
-\includegraphics[width=0.85\linewidth]{Figures/ablation_training_size.pdf}
-\caption{Training-data ablation. The horizontal axis uses a logarithmic scale. Curves show success against Random, the static mean, and the average static minimum.}
-\label{fig:datavolume}
-\end{figure}
 
 \paragraph{Discount factor and effective horizon.}
 Figure~\ref{fig:discountfactor} reports the discount-factor sweep for Nash-Q. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=0.85\linewidth]{Figures/ablation_discount_factor.pdf}
-\caption{Discount-factor ablation, reproduced from the supplied Nash-Q sweep. Values are approximately digitized from the plotted markers; uncertainty estimates were not supplied.}
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\vspace{0pt}
+\includegraphics[width=\linewidth]{Figures/ablation_training_size.pdf}
+\caption{Training-data ablation with a logarithmic training-size axis.}
+\label{fig:datavolume}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\vspace{0pt}
+\includegraphics[width=\linewidth]{Figures/ablation_discount_factor.pdf}
+\caption{Nash-Q discount-factor ablation. Values are approximately digitized; uncertainty estimates were not supplied.}
 \label{fig:discountfactor}
+\end{minipage}
 \end{figure}
 
 \draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values; variability across independent training seeds.}
