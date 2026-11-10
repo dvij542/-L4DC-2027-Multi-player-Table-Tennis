@@ -184,9 +184,9 @@ For a point-based competitive objective, we define
 \end{equation}
 The utility is zero while the rally continues, and $r^1=-r^2$ for a resolved point. Equation~\eqref{eq:value} then values the discounted point outcome over the continuation of the rally. A discount below one gives greater weight to earlier outcomes; it is a modeling choice rather than the official scoring rule. The competitive objective rewards winning points, while legal return execution and preparation enter through the transition dynamics.
 
-\paragraph{Policy parameterization.}
+\paragraph{Policy parameterization.} \label{sec:polcy_param}
 Each player has an attack component and a defense component, $\theta^i=(\theta^{\attack,i},\theta^{\defend,i})$.
-A complete strategy specifies both components because each player repeatedly occupies both roles. The same target sets, preparation sets, and execution controllers provide the action interface for potential-based planning and self-play reinforcement learning.
+A complete strategy specifies both components because each player repeatedly occupies both roles. During each exchange, the attacker player $i$ chooses action $\Actions^i(x_t) = f_{\theta^{A,i}}(x_t)$, and the defender player $-i$ chooses action $\Actions^{-i}(x_t) = f_{\theta^{D,-i}}(x_t)$. The same target sets, preparation sets, and execution controllers provide the action interface for potential-based planning and self-play reinforcement learning. For self-play the functions $f_{\theta^{A,i}}$ and $f_{\theta^{D,i}}$ are represented by neural network with policy parameters $\theta^{A,i}$ and $\theta^{D,i}$. However, for $\alpha$-Potential formulation, we approximate the interaction as follows:- For the attacker role, choose $\theta^{A,i} \in \mathcal{K}$ and $\theta^{D,-i} \in \mathcal{M}$. For the first exchange, the attacker plays the chosen return choice and for the subsequent interactions, choose random return choice and preparation positions. Similarly, the defender plays the chosen preparation position represented by the policy parameter $\theta^{D,-i}$ and then choose random return choice and preparation position. With this parameterization, we can still train the potential function on collected data by randomly choosing skill at each exchange as described in further sections.
 
 \section{Approximating Multi-agent Interaction}
 \label{sec:approximation}
@@ -196,12 +196,14 @@ We develop two approaches to strategic play in the attacker--defender game: appr
 \subsection{$\alpha$-Potential Function: Offline Learning and Online Optimization}
 \label{sec:potential}
 
-Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024dynamic,kalaria2025racer}, we seek a scalar function that tracks the effect of changing one player's strategy. For simplicity, each continuation policy uses a fixed attack target and preparation position, with parameters
+Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024dynamic,kalaria2025racer}, we seek a scalar function that tracks the effect of changing one player's strategy. We parameterize the policy of the agent as using an attack target from $\mathcal{K}$ for attacker and a preparation position from $\mathcal{M}$, for the first exchange followed by random choice of attack target and preparation position for subsequent exchanges as described in Section \ref{sec:polcy_param}. Mathematically:-
+
 \begin{equation}
-  \theta^i=(w^{\attack,i},w^{\defend,i})\in\mathcal{K}\times\mathcal{M}.
+  \theta=(w^{\attack,i},w^{\defend,-i})\in\mathcal{K}\times\mathcal{M}.
   \label{eq:compacttheta}
 \end{equation}
-The tuple specifies one choice from each set, giving fifteen policies per player. These choices remain fixed during a continuation rollout, while the execution controllers react to the physical state. The online solver can update the selections at each new exchange state.
+The tuple specifies one choice from each set, giving fifteen joint policies in total where the attacker has $5$ choices and defender $3$. For data collection, the attack and defense positions are chosen randomly consistent with the policy parameterization scheme, while the execution controllers react to the physical state. 
+% The online solver can update the selections at each new exchange state.
 
 \begin{definition}[Dynamic $\alpha$-potential function]
 A function $\Phi:\States\times\Theta\to\R$ is an $\alpha$-potential function for the chosen policy family if, for every $x\in\States$, $i\in\Players$, $\theta\in\Theta$, and alternative $\theta^{i\prime}\in\Theta^i$,
@@ -268,7 +270,7 @@ Given exchange state $x_t$, we optimize the learned function over the joint disc
   \operatorname*{arg\,max}_{\theta\in\Theta}\Phi_\varphi(x_t,\theta).
   \label{eq:onlinepotential}
 \end{equation}
-At each exchange, we evaluate candidate joint parameters from $\Theta=(\mathcal{K}\times\mathcal{M})^2$ and select the candidate with the largest value of $\Phi_\varphi(x_t,\theta)$. The joint parameter space contains $15^2=225$ profiles. Each robot executes the component corresponding to its current role. Proposition~\ref{prop:potential} applies subject to the potential error and the optimization gap over this joint space.
+At each exchange, we evaluate candidate joint parameters from $\Theta=(\mathcal{K}\times\mathcal{M})$ and select the candidate with the largest value of $\Phi_\varphi(x_t,\theta)$. The joint parameter space contains $15$ profiles. Each robot executes the component corresponding to its current role. Proposition~\ref{prop:potential} applies subject to the potential error and the optimization gap over this joint space.
 Against a baseline opponent, the opponent retains its own policy. The feedback policy obtained by repeatedly optimizing at successive exchanges is assessed separately through best-response tests.
 
 \subsection{Self-Play Reinforcement Learning}
