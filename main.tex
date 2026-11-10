@@ -330,20 +330,22 @@ For example, one strategy always returns toward the left-deep target when attack
 
 Iterated best response (IBR) alternates updates of each player's attack and defense parameters to maximize its value $V^i$ against the other's current strategy \citep{spica2020drone}. At a given state, we use simulated returns over horizon $H_{\mathrm{IBR}} = 5$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}.
 
+Nash-Q learns strategic action values using equilibrium-based updates \citep{hu2003nashq}.
+
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for $\alpha$-potential against the fifteen static pairings, the random baseline, IBR, and another $\alpha$-potential policy. The static mean and minimum are 79.8\% and 60.0\%, respectively; the win rates against Random and IBR are 75.0\% and 60.0\%. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for Nash-Q against the fifteen static pairings, the random baseline, IBR, and $\alpha$-potential. The static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential are 72.5\%, 45.0\%, and 57.5\%. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccccc}
 \toprule
-Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & \shortstack{Other\\$\alpha$-potential}\\
+Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & $\alpha$-potential\\
 \midrule
-$\alpha$-potential & 79.8\% & 60.0\% & 75.0\% & 60.0\% & 50.0\%\\
+Nash-Q & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. ``Other $\alpha$-potential'' reports performance against another policy using the same method.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the previously reported Potential Adaptive Match policy.}
 \label{tab:performance}
 \end{table}
 
@@ -364,7 +366,7 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 \toprule
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
-$\alpha$-potential & \TBD & \TBD\\
+Nash-Q & \TBD & \TBD\\
 Self-play RL & \TBD & \TBD\\
 \bottomrule
 \end{tabular}
@@ -378,17 +380,17 @@ Self-play RL & \TBD & \TBD\\
 \label{sec:resultsablation}
 
 \paragraph{Training-data volume.}
-Figure~\ref{fig:datavolume} shows the success rate of $\alpha$-potential as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
+Figure~\ref{fig:datavolume} shows success rates as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
 
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=0.85\linewidth]{Figures/ablation_training_size.pdf}
-\caption{Training-data ablation for $\alpha$-potential. The horizontal axis uses a logarithmic scale. Curves show success against Random, the static mean, and the average static minimum.}
+\caption{Training-data ablation. The horizontal axis uses a logarithmic scale. Curves show success against Random, the static mean, and the average static minimum.}
 \label{fig:datavolume}
 \end{figure}
 
 \paragraph{Discount factor and effective horizon.}
-Figure~\ref{fig:discountfactor} reports the supplied discount-factor sweep, labeled Nash-Q in the source plot. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
+Figure~\ref{fig:discountfactor} reports the discount-factor sweep for Nash-Q. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
@@ -397,7 +399,7 @@ Figure~\ref{fig:discountfactor} reports the supplied discount-factor sweep, labe
 \label{fig:discountfactor}
 \end{figure}
 
-\draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values and method attribution; variability across independent training seeds.}
+\draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values; variability across independent training seeds.}
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
