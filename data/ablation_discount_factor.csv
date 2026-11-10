@@ -1,0 +1,6 @@
+discount_factor,random_success_pct,static_mean_pct
+0.5,70.0,78.0
+0.6,75.0,76.5
+0.8,75.0,77.5
+0.9,72.5,75.0
+1.0,70.0,76.0

@@ -1,0 +1,4 @@
+training_size,random_success_pct,static_mean_pct,average_static_minimum_pct
+500,68.13,74.58,45.00
+5000,73.75,81.73,67.75
+50000,77.00,84.17,70.63

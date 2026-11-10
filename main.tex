@@ -7,7 +7,7 @@
 %   five symbolic return targets; three symbolic preparation configurations;
 %   discounted point-outcome utility and fixed low-level execution controllers.
 % Method choices drafted here: discrete fixed-target parameters for the
-% potential solver; categorical REINFORCE self-play with a frozen opponent pool.
+% potential solver; categorical PPO self-play with a frozen opponent pool.
 % Table 1 contains supplied competitive win rates; other experimental
 % measurements and implementation hyperparameters remain pending.
 \documentclass[pmlr]{jmlr}
@@ -299,17 +299,17 @@ We also learn strategic policies by self-play, building on hierarchical table te
 Here $\Delta_d=\{p\in\R_{\geq0}^d:\sum_{j=1}^{d}p_j=1\}$ is the probability simplex. Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. Unlike the fixed-target continuation policies in Equation~\eqref{eq:compacttheta}, this policy can condition its strategic probabilities on each new state; this difference in policy representation is included when interpreting comparisons.
 
 \paragraph{Training objective and opponent updates.}
-We train each player to maximize its discounted point utility using REINFORCE with a learned value baseline \citep{williams1992reinforce}.
-We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. If a rollout is truncated before termination, its remaining return is estimated by the critic; this bootstrapping is an approximation to the Monte Carlo REINFORCE target.
+We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
+We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
 
 \paragraph{Evaluation and equilibrium interpretation.}
-We freeze the trained actor parameters and evaluate both sampled categorical actions and deterministic argmax actions. Self-play policies are candidate equilibrium strategies: REINFORCE and opponent-pool training do not by themselves guarantee convergence to Nash equilibrium.
+We freeze the trained actor parameters for evaluation. Self-play policies are candidate equilibrium strategies: PPO and opponent-pool training do not by themselves guarantee convergence to Nash equilibrium.
 % We quantify the gain available to a separately trained response against each frozen policy and compare competitive outcomes against the same opponents used for potential-based planning. This evaluates both resistance to exploitation and practical performance without identifying self-play win rate with an equilibrium certificate.
 
 \section{Results}
 \label{sec:results}
 
-Our evaluation addresses three questions: \textbf{(Q1)} How do potential-based approximate equilibrium policies and self-play policies compare with fifteen static strategies, a random strategy, and iterated best response? \textbf{(Q2)} How do training-data volume, discount factor, and action randomization influence performance? \textbf{(Q3)} Do the learned strategies exhibit conditional shot-placement patterns similar to those observed in human table tennis?
+Our evaluation addresses three questions: \textbf{(Q1)} How do potential-based approximate equilibrium policies and self-play policies compare with fifteen static strategies, a random strategy, and iterated best response? \textbf{(Q2)} How do training-data volume and discount factor influence performance? \textbf{(Q3)} Do the learned strategies exhibit conditional shot-placement patterns similar to those observed in human table tennis?
 
 \paragraph{Experimental setup.}
 We use the MuJoCo environment and common execution controllers from Section~\ref{sec:model}. We evaluate independently trained seeds on held-out rally initializations, balancing table sides and initial roles. All methods use the same physical parameters, target geometry, preparation configurations, and point-scoring rules.
@@ -330,28 +330,20 @@ For example, one strategy always returns toward the left-deep target when attack
 
 Iterated best response (IBR) alternates updates of each player's attack and defense parameters to maximize its value $V^i$ against the other's current strategy \citep{spica2020drone}. At a given state, we use simulated returns over horizon $H_{\mathrm{IBR}} = 5$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}.
 
-Nash-Q uses equilibrium-based value learning \citep{hu2003nashq}. The exact response operators and training details for BR-Q and the potential variants remain to be specified.
-
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for six methods against the fifteen static pairings, the random baseline, IBR, and Potential Adaptive Match. The static columns report the mean and minimum win rates across the fifteen pairings. Potential BR achieves the highest static mean (83.0\%), static minimum (70.0\%), and win rate against Random (77.5\%). Potential IBR achieves the highest win rate against IBR (62.5\%), while Nash-Q achieves the highest win rate against Potential Adaptive Match (57.5\%). These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
-
+Table~\ref{tab:performance} reports point win rates for $\alpha$-potential against the fifteen static pairings, the random baseline, IBR, and another $\alpha$-potential policy. The static mean and minimum are 79.8\% and 60.0\%, respectively; the win rates against Random and IBR are 75.0\% and 60.0\%. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccccc}
 \toprule
-Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & \shortstack{Other proposed\\(Potential Adaptive\\Match)}\\
+Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & \shortstack{Other\\$\alpha$-potential}\\
 \midrule
-Nash-Q & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
-BR-Q & 80.8\% & 65.0\% & 70.0\% & 45.0\% & 52.5\%\\
-Potential IBR & 82.5\% & 67.5\% & 70.0\% & 62.5\% & 50.0\%\\
-Potential BR & 83.0\% & 70.0\% & 77.5\% & 57.5\% & 50.0\%\\
-Potential Adaptive Match & 79.8\% & 60.0\% & 75.0\% & 60.0\% & 50.0\%\\
-Potential Minimax & 81.0\% & 65.0\% & 72.5\% & 60.0\% & 47.5\%\\
+$\alpha$-potential & 79.8\% & 60.0\% & 75.0\% & 60.0\% & 50.0\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. ``Other proposed'' reports performance against Potential Adaptive Match.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. ``Other $\alpha$-potential'' reports performance against another policy using the same method.}
 \label{tab:performance}
 \end{table}
 
@@ -372,12 +364,7 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 \toprule
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
-Nash-Q & \TBD & \TBD\\
-BR-Q & \TBD & \TBD\\
-Potential IBR & \TBD & \TBD\\
-Potential BR & \TBD & \TBD\\
-Potential Adaptive Match & \TBD & \TBD\\
-Potential Minimax & \TBD & \TBD\\
+$\alpha$-potential & \TBD & \TBD\\
 Self-play RL & \TBD & \TBD\\
 \bottomrule
 \end{tabular}
@@ -385,50 +372,32 @@ Self-play RL & \TBD & \TBD\\
 \label{tab:regret}
 \end{table}
 
-\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; implementation details for Nash-Q, BR-Q, and the four potential variants; response gains in Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
+\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; response gains in Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
 
-\subsection{Effects of Data, Horizon, and Stochasticity}
+\subsection{Effects of Training Data and Discount Factor}
 \label{sec:resultsablation}
 
 \paragraph{Training-data volume.}
-We train the value estimators and potential function on nested subsets containing different numbers $M$ of independently generated rallies. We keep the network architecture, rollout horizon, discount factor, and optimization protocol fixed. Figure~\ref{fig:datavolume} reserves space for win rates against the baseline opponents as a function of training-data volume. We observe improved performance with more training data; the full curves and uncertainty estimates remain to be added.
+Figure~\ref{fig:datavolume} shows the success rate of $\alpha$-potential as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
 
 \begin{figure}[tbp]
 \centering
-\figureplaceholder{Baseline-opponent win rates versus the number of independently generated training rallies.}
-\caption{Training-data ablation. Placeholder for measured curves and uncertainty across training seeds.}
+\includegraphics[width=0.85\linewidth]{Figures/ablation_training_size.pdf}
+\caption{Training-data ablation for $\alpha$-potential. The horizontal axis uses a logarithmic scale. Curves show success against Random, the static mean, and the average static minimum.}
 \label{fig:datavolume}
 \end{figure}
 
 \paragraph{Discount factor and effective horizon.}
-We vary $\gamma$ at a common rollout cutoff to examine the balance between early point outcomes and longer-term strategy. This changes the objective in Equation~\eqref{eq:value}, while the rollout length remains fixed. Figure~\ref{fig:discountfactor} reserves space for win rates against the baseline opponents. The reported comparison peaks at $\gamma=0.6$; the numerical sweep remains to be added. Lower discount factors emphasize earlier outcomes, whereas higher values retain more distant consequences and may require more data for accurate value estimation.
+Figure~\ref{fig:discountfactor} reports the supplied discount-factor sweep, labeled Nash-Q in the source plot. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
-\figureplaceholder{Baseline-opponent win rates versus discount factor $\gamma$, with a fixed rollout cutoff and training budget.}
-\caption{Discount-factor ablation. Placeholder for the sweep, including the reported maximum at $\gamma=0.6$, and uncertainty estimates.}
+\includegraphics[width=0.85\linewidth]{Figures/ablation_discount_factor.pdf}
+\caption{Discount-factor ablation, reproduced from the supplied Nash-Q sweep. Values are approximately digitized from the plotted markers; uncertainty estimates were not supplied.}
 \label{fig:discountfactor}
 \end{figure}
 
-\paragraph{Stochastic and deterministic policy deployment.}
-We compare deterministic argmax actions with actions sampled from the categorical distributions of the same trained self-play actors. Table~\ref{tab:stochasticity} reserves space for both deployment variants. This comparison concerns strategic action randomization; it does not vary the physical transition model.
-
-\begin{table}[tbp]
-\centering
-\small
-\begin{tabular}{lcccc}
-\toprule
-Deployment & Static mean & Static minimum & Random & IBR\\
-\midrule
-Deterministic argmax & \TBD & \TBD & \TBD & \TBD\\
-Categorical sampling & \TBD & \TBD & \TBD & \TBD\\
-\bottomrule
-\end{tabular}
-\caption{Placeholder for self-play deployment win rates. The draft reports a minimum static-opponent win rate of 55\% for self-play RL, but its deployment variant and the full breakdown remain unspecified.}
-\label{tab:stochasticity}
-\end{table}
-
-\draftresult{Data-volume and discount-factor measurements; simulated-interaction budgets; self-play deployment results; variability across independent training seeds.}
+\draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values and method attribution; variability across independent training seeds.}
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
