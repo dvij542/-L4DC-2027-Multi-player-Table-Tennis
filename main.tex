@@ -338,16 +338,16 @@ Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and t
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lccccc}
+\begin{tabular}{lccccccc}
 \toprule
-Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{Simulated IBR\\($H=5$)} & $\alpha$-potential\\
+Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{IBR\\($H=5$)} & $\alpha$-potential & \shortstack{Self-play RL \\(argmax)} & \shortstack{Self-play RL \\(sampled)}\\
 \midrule
-$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
-Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 39.6\% & ---\\
-Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 30.0\% & ---\\
+$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 56.8 \% & 50.0\% & -- & --\\
+Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 75.3\% & --- & 50.0\% & --\\
+Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 77.0\% & --- & -- & 50.0\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the fixed policy previously reported as Potential Adaptive Match. A dash denotes an unreported result.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. }
 \label{tab:performance}
 \end{table}
 
@@ -359,7 +359,7 @@ For a frozen profile $\pi=(\pi^1,\pi^2)$, we define the state-dependent unilater
   V^i(x;\widetilde\pi^i,\pi^{-i})-V^i(x;\pi).
   \label{eq:empiricalregret}
 \end{equation}
-Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search is a lower bound on this regret, rather than an equilibrium certificate; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains, with $\alpha$-potential results pending.
+Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search is a lower bound on this regret, rather than an equilibrium certificate; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains.
 
 \begin{table}[tbp]
 \centering
@@ -377,7 +377,7 @@ Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
 \label{tab:regret}
 \end{table}
 
-\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; $\alpha$-potential response gains and the variability definition for Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
+% \draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; $\alpha$-potential response gains and the variability definition for Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
 
 \subsection{Effects of Training Data and Discount Factor}
 \label{sec:resultsablation}
@@ -407,7 +407,7 @@ Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-p
 \end{minipage}
 \end{figure}
 
-\draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values; variability across independent training seeds.}
+% \draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values; variability across independent training seeds.}
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
@@ -427,12 +427,12 @@ We map valid first-bounce locations on the opponent's half to the same five targ
 \end{equation}
 where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. We apply the same procedure to realized landing locations from each proposed method. Figure~\ref{fig:humanheatmaps} reserves space for the resulting nine-context heatmaps, and Table~\ref{tab:humancorrelation} summarizes Pearson correlations and Jensen--Shannon divergences between the human and model distributions. Correlation is undefined for a constant distribution, so such cases are reported separately. We observe closer agreement with human returns than the random baseline; the numerical comparisons and uncertainty estimates remain pending. Agreement would support the representation's ability to capture some human placement patterns, but would not establish that human play is an equilibrium.
 
-\begin{figure}[tbp]
-\centering
-\figureplaceholder{Nine position-conditioned landing heatmaps for human play, potential-based planning, self-play RL, and the random baseline.}
-\caption{Human--model landing distributions. Placeholder for heatmaps with shared color scales and context sample counts.}
-\label{fig:humanheatmaps}
-\end{figure}
+% \begin{figure}[tbp]
+% \centering
+% \figureplaceholder{Nine position-conditioned landing heatmaps for human play, potential-based planning, self-play RL, and the random baseline.}
+% \caption{Human--model landing distributions. Placeholder for heatmaps with shared color scales and context sample counts.}
+% \label{fig:humanheatmaps}
+% \end{figure}
 
 \begin{table}[t]
 \centering
