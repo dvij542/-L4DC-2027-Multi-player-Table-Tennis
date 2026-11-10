@@ -330,10 +330,10 @@ For example, one strategy always returns toward the left-deep target when attack
 
 Iterated best response (IBR) alternates updates of each player's attack and defense parameters to maximize its value $V^i$ against the other's current strategy \citep{spica2020drone}. At a given state, we use simulated returns over horizon $H_{\mathrm{IBR}} = 5$ to estimate each response in the compact family of Equation~\eqref{eq:compacttheta}.
 
-Nash-Q learns strategic action values using equilibrium-based updates \citep{hu2003nashq}.
+The $\alpha$-potential planner selects strategic actions by optimizing the learned potential function, as described in Section~\ref{sec:approximation}.
 
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for Nash-Q and two deployment modes of self-play RL against the baseline opponents. For Nash-Q, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential are 72.5\%, 45.0\%, and 57.5\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates than sampled deployment on all four reported metrics, reaching 82.0\% against Random. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and the fixed $\alpha$-potential opponent are 72.5\%, 45.0\%, and 57.5\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates than sampled deployment on all four reported metrics, reaching 82.0\% against Random. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
@@ -342,12 +342,12 @@ Table~\ref{tab:performance} reports point win rates for Nash-Q and two deploymen
 \toprule
 Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{Simulated IBR\\($H=5$)} & $\alpha$-potential\\
 \midrule
-Nash-Q & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
+$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
 Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 39.6\% & ---\\
 Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 30.0\% & ---\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the previously reported Potential Adaptive Match policy. A dash denotes an unreported result.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the fixed policy previously reported as Potential Adaptive Match. A dash denotes an unreported result.}
 \label{tab:performance}
 \end{table}
 
@@ -359,7 +359,7 @@ For a frozen profile $\pi=(\pi^1,\pi^2)$, we define the state-dependent unilater
   V^i(x;\widetilde\pi^i,\pi^{-i})-V^i(x;\pi).
   \label{eq:empiricalregret}
 \end{equation}
-Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search is a lower bound on this regret, rather than an equilibrium certificate; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reserves space for these measurements.
+Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search is a lower bound on this regret, rather than an equilibrium certificate; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains, with $\alpha$-potential results pending.
 
 \begin{table}[tbp]
 \centering
@@ -368,15 +368,16 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 \toprule
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
-Nash-Q & \TBD & \TBD\\
-Self-play RL & \TBD & \TBD\\
+$\alpha$-potential & \TBD & \TBD\\
+Self-play RL (sampled) & $0.07\pm0.09$ & $0.01\pm0.02$\\
+Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
 \bottomrule
 \end{tabular}
-\caption{Placeholder for empirical unilateral response gains. Values, response-search budgets, evaluation states, and confidence intervals are pending.}
+\caption{Empirical unilateral response gains for self-play RL; $\alpha$-potential results are pending. The reported central values and variability are reproduced as supplied; the variability statistic and evaluation protocol remain to be specified.}
 \label{tab:regret}
 \end{table}
 
-\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; response gains in Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
+\draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; $\alpha$-potential response gains and the variability definition for Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
 
 \subsection{Effects of Training Data and Discount Factor}
 \label{sec:resultsablation}
@@ -386,7 +387,7 @@ Figure~\ref{fig:datavolume} shows success rates as the training-set size increas
 
 
 \paragraph{Discount factor and effective horizon.}
-Figure~\ref{fig:discountfactor} reports the discount-factor sweep for Nash-Q. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
+Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-potential. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
@@ -401,7 +402,7 @@ Figure~\ref{fig:discountfactor} reports the discount-factor sweep for Nash-Q. Th
 \centering
 \vspace{0pt}
 \includegraphics[width=\linewidth]{Figures/ablation_discount_factor.pdf}
-\caption{Nash-Q discount-factor ablation. Values are approximately digitized; uncertainty estimates were not supplied.}
+\caption{$\alpha$-potential discount-factor ablation. Values are approximately digitized; uncertainty estimates were not supplied.}
 \label{fig:discountfactor}
 \end{minipage}
 \end{figure}
