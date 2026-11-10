@@ -333,19 +333,21 @@ Iterated best response (IBR) alternates updates of each player's attack and defe
 Nash-Q learns strategic action values using equilibrium-based updates \citep{hu2003nashq}.
 
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for Nash-Q against the fifteen static pairings, the random baseline, IBR, and $\alpha$-potential. The static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential are 72.5\%, 45.0\%, and 57.5\%. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for Nash-Q and two deployment modes of self-play RL against the baseline opponents. For Nash-Q, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential are 72.5\%, 45.0\%, and 57.5\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates than sampled deployment on all four reported metrics, reaching 82.0\% against Random. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccccc}
 \toprule
-Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & IBR & $\alpha$-potential\\
+Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{Simulated IBR\\($H=5$)} & $\alpha$-potential\\
 \midrule
 Nash-Q & 80.7\% & 62.5\% & 72.5\% & 45.0\% & 57.5\%\\
+Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 39.6\% & ---\\
+Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 30.0\% & ---\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the previously reported Potential Adaptive Match policy.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. The $\alpha$-potential opponent is the previously reported Potential Adaptive Match policy. A dash denotes an unreported result.}
 \label{tab:performance}
 \end{table}
 
