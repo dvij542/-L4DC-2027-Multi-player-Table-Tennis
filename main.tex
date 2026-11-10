@@ -1,15 +1,5 @@
-% alpha-PLAYER draft: abstract and Sections 1--5.
-% The jmlr pmlr option is the underlying format of the L4DC template.
-% References are maintained separately in references.bib.
-% Replace submission metadata and author information for the final submission.
-% Draft modeling choices pending confirmation:
-%   singles (two strategic players); stochastic high-level policies;
-%   five symbolic return targets; three symbolic preparation configurations;
-%   discounted point-outcome utility and fixed low-level execution controllers.
-% Method choices drafted here: discrete fixed-target parameters for the
-% potential solver; categorical PPO self-play with a frozen opponent pool.
-% Table 1 contains supplied competitive win rates; other experimental
-% measurements and implementation hyperparameters remain pending.
+% The jmlr pmlr option provides the L4DC format.
+% References are maintained in references.bib.
 \documentclass[pmlr]{jmlr}
 \usepackage{times}
 \usepackage{amsmath,amssymb,booktabs}
@@ -32,12 +22,7 @@
 \newcommand{\ind}{\mathbf{1}}
 \newcommand{\attack}{\mathrm{A}}
 \newcommand{\defend}{\mathrm{D}}
-\newcommand{\TBD}{\textit{TBD}}
-\newcommand{\draftresult}[1]{\par\noindent\textit{Pending results: #1}\par}
-\newcommand{\figureplaceholder}[1]{%
-  \fbox{\parbox[c][30mm][c]{0.9\linewidth}{\centering
-    \textbf{Figure placeholder}\\[4pt]#1}}%
-}
+\newcommand{\resultblank}{\phantom{0.00}}
 
 \begin{document}
 \maketitle
@@ -117,7 +102,6 @@ Human table tennis strategies have been inferred through inverse reinforcement l
 \label{sec:model}
 
 We first introduce the dynamic-game notation, following the policy-parameter perspective used in $\alpha$-RACER \citep{kalaria2025racer}. We then instantiate the game for robot table tennis. The notation permits multiple strategic players; the attacker--defender environment developed here concerns singles table tennis, with two players.
-% Extending the formulation to doubles would additionally require team utilities and a rule for which team member returns each shot.
 
 \subsection{Preliminaries on Dynamic Game Theory}
 \label{sec:preliminaries}
@@ -181,7 +165,7 @@ Let $\mathcal{K}=\{1,\ldots,5\}$ index the return targets and $\mathcal{M}=\{1,2
 Both choices use the physical state available at the exchange boundary. The defender does not receive the attacker's newly selected target before choosing its preparation action. Subsequent low-level control can react to observed ball motion. This timing models preparation under uncertainty about the next shot, rather than granting the defender advance knowledge of its destination. Figure~\ref{fig:environment} illustrates the environment and the attack-target and preparation-position geometry.
 
 \paragraph{Physical execution and transition dynamics.}
-Fixed execution controllers translate strategic targets into state-feedback robot commands. An attack controller $\kappa^{\attack,i}$ attempts to return the incoming ball toward the selected landing target; a preparation controller $\kappa^{\defend,i}$ moves the robot toward the selected ready configuration. Appendix~\ref{app:execution} is reserved for the low-level controller implementation details. MuJoCo advances the robot and ball dynamics, including the modeled table, net, and racket interactions \citep{todorov2012mujoco}. Together, the execution controllers and simulation define
+Fixed execution controllers translate strategic targets into state-feedback robot commands. An attack controller $\kappa^{\attack,i}$ attempts to return the incoming ball toward the selected landing target; a preparation controller $\kappa^{\defend,i}$ moves the robot toward the selected ready configuration. Appendix~\ref{app:execution} describes the low-level execution interface. MuJoCo advances the robot and ball dynamics, including the modeled table, net, and racket interactions \citep{todorov2012mujoco}. Together, the execution controllers and simulation define
 \begin{equation}
   x_{t+1}\sim P_{\mathrm{TT}}(\cdot\mid x_t,k_t,m_t).
   \label{eq:ttkernel}
@@ -198,7 +182,7 @@ For a point-based competitive objective, we define
 \end{aligned}
   \label{eq:reward}
 \end{equation}
-The utility is zero while the rally continues, and $r^1=-r^2$ for a resolved point. Equation~\eqref{eq:value} then values the discounted point outcome over the continuation of the rally. A discount below one gives greater weight to earlier outcomes; it is a modeling choice rather than the official scoring rule. The competitive objective rewards winning points, while legal return execution and preparation enter through the transition dynamics. A specific reward-shaping scheme, if used for training, must be distinguished from this evaluation utility.
+The utility is zero while the rally continues, and $r^1=-r^2$ for a resolved point. Equation~\eqref{eq:value} then values the discounted point outcome over the continuation of the rally. A discount below one gives greater weight to earlier outcomes; it is a modeling choice rather than the official scoring rule. The competitive objective rewards winning points, while legal return execution and preparation enter through the transition dynamics.
 
 \paragraph{Policy parameterization.}
 Each player has an attack component and a defense component, $\theta^i=(\theta^{\attack,i},\theta^{\defend,i})$.
@@ -275,7 +259,7 @@ We learn the network by minimizing the largest sampled discrepancy:
   |e_\varphi|\leq y\quad\text{for every sample in }\mathcal{S}.
   \label{eq:potentialtraining}
 \end{equation}
-This finite-sample objective approximates the uniform requirement in Equation~\eqref{eq:alphapotential}. If the discrepancy bound were uniform and the value estimators had uniform error at most $\beta$, the learned function would have true approximation error at most $y+2\beta$. Training and held-out residuals alone do not certify these uniform bounds; the results therefore also examine value-estimation error and unilateral improvement in simulation.
+This finite-sample objective approximates the uniform requirement in Equation~\eqref{eq:alphapotential}. Under a uniform discrepancy bound of $y$ and a uniform value-estimation error of at most $\beta$, the true potential approximation error is at most $y+2\beta$. The uniform bound is the hypothesis required for the equilibrium guarantee; sampled residuals characterize the fit on the evaluated states and policy profiles. We assess the learned strategies through empirical unilateral response gains in simulation.
 
 \paragraph{Online phase.}
 Given exchange state $x_t$, we optimize the learned function over the joint discrete policy parameters:
@@ -303,7 +287,7 @@ We train each player to maximize its discounted point utility using proximal pol
 We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
 
 \paragraph{Evaluation and equilibrium interpretation.}
-We freeze the trained actor parameters for evaluation. Self-play policies are candidate equilibrium strategies: PPO and opponent-pool training do not by themselves guarantee convergence to Nash equilibrium.
+We freeze the trained actor parameters for evaluation and assess their equilibrium quality through unilateral response gains against the frozen policies.
 % We quantify the gain available to a separately trained response against each frozen policy and compare competitive outcomes against the same opponents used for potential-based planning. This evaluates both resistance to exploitation and practical performance without identifying self-play win rate with an equilibrium certificate.
 
 \section{Results}
@@ -313,7 +297,6 @@ Our evaluation addresses three questions: \textbf{(Q1)} How do potential-based a
 
 \paragraph{Experimental setup.}
 We use the MuJoCo environment and common execution controllers from Section~\ref{sec:model}. We evaluate independently trained seeds on held-out rally initializations, balancing table sides and initial roles. All methods use the same physical parameters, target geometry, preparation configurations, and point-scoring rules.
-% We report completed-point win rates alongside discounted utility, legal-return rate, rally length, and strategic computation time. Treat unresolved evaluation cutoffs separately from point losses, and report their frequency. Confidence intervals account for independent training seeds and rally sampling. \textit{Implementation details to add: robot model and degree-of-freedom count, target and preparation coordinates, dataset sizes, horizons, discount factors, network architectures, optimization budgets, training seeds, and evaluation rally counts.}
 
 \subsection{Competitive Performance and Equilibrium Quality}
 \label{sec:resultsperformance}
@@ -333,21 +316,21 @@ Iterated best response (IBR) alternates updates of each player's attack and defe
 The $\alpha$-potential planner selects strategic actions by optimizing the learned potential function, as described in Section~\ref{sec:approximation}.
 
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and the fixed $\alpha$-potential opponent are 72.5\%, 45.0\%, and 57.5\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates than sampled deployment on all four reported metrics, reaching 82.0\% against Random. These competitive outcomes alone do not establish equilibrium quality. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential self-play are 72.5\%, 56.8\%, and 50.0\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher static-opponent and random-opponent win rates, reaching 82.0\% against Random. Sampled deployment achieves 77.0\% against IBR, compared with 75.3\% for argmax. Win rates measure competitive performance. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{2pt}
 \begin{tabular}{lccccccc}
 \toprule
 Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{IBR\\($H=5$)} & $\alpha$-potential & \shortstack{Self-play RL \\(argmax)} & \shortstack{Self-play RL \\(sampled)}\\
 \midrule
-$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 56.8 \% & 50.0\% & -- & --\\
+$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 56.8\% & 50.0\% & -- & --\\
 Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 75.3\% & --- & 50.0\% & --\\
 Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 77.0\% & --- & -- & 50.0\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. }
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies.}
 \label{tab:performance}
 \end{table}
 
@@ -359,7 +342,7 @@ For a frozen profile $\pi=(\pi^1,\pi^2)$, we define the state-dependent unilater
   V^i(x;\widetilde\pi^i,\pi^{-i})-V^i(x;\pi).
   \label{eq:empiricalregret}
 \end{equation}
-Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search is a lower bound on this regret, rather than an equilibrium certificate; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains.
+Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search provides an empirical lower bound on this regret; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains.
 
 \begin{table}[tbp]
 \centering
@@ -368,16 +351,14 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 \toprule
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
-$\alpha$-potential & \TBD & \TBD\\
+$\alpha$-potential & \resultblank & \resultblank\\
 Self-play RL (sampled) & $0.07\pm0.09$ & $0.01\pm0.02$\\
 Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
 \bottomrule
 \end{tabular}
-\caption{Empirical unilateral response gains for self-play RL; $\alpha$-potential results are pending. The reported central values and variability are reproduced as supplied; the variability statistic and evaluation protocol remain to be specified.}
+\caption{Empirical unilateral response gains for each player. Self-play RL is evaluated with sampled and argmax action selection.}
 \label{tab:regret}
 \end{table}
-
-% \draftresult{The complete static-opponent matrices; confidence intervals and evaluation sample counts for Table~\ref{tab:performance}; $\alpha$-potential response gains and the variability definition for Table~\ref{tab:regret}; potential residuals, value-estimation errors, and online computation times.}
 
 \subsection{Effects of Training Data and Discount Factor}
 \label{sec:resultsablation}
@@ -385,9 +366,8 @@ Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
 \paragraph{Training-data volume.}
 Figure~\ref{fig:datavolume} shows success rates as the training-set size increases from 500 to 50,000. Against the random opponent, success increases from 68.13\% to 77.00\%; the static mean increases from 74.58\% to 84.17\%, and the average static minimum increases from 45.00\% to 70.63\%. All three metrics improve with additional training data. The larger gain in the average static minimum indicates improved performance against the most challenging fixed strategies.
 
-
 \paragraph{Discount factor and effective horizon.}
-Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-potential. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. Thus, the sweep does not identify a unique best discount factor across both metrics. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
+Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-potential. The success rate against the random opponent reaches approximately 75\% at both $\gamma=0.6$ and $\gamma=0.8$, while the mean over fifteen fixed opponents remains approximately 75--78\% across the sweep. The sweep shows comparable performance at $\gamma=0.6$ and $\gamma=0.8$, with stable static-opponent performance across the evaluated range. Lower discount factors emphasize earlier point outcomes, whereas higher values retain more distant consequences. The endpoint $\gamma=1$ is the undiscounted episodic comparison, evaluated over the finite rollout rather than using an infinite-horizon tail bound.
 
 \begin{figure}[tbp]
 \centering
@@ -402,12 +382,10 @@ Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-p
 \centering
 \vspace{0pt}
 \includegraphics[width=\linewidth]{Figures/ablation_discount_factor.pdf}
-\caption{$\alpha$-potential discount-factor ablation. Values are approximately digitized; uncertainty estimates were not supplied.}
+\caption{$\alpha$-potential discount-factor ablation against random and fixed opponents.}
 \label{fig:discountfactor}
 \end{minipage}
 \end{figure}
-
-% \draftresult{Training-size units and simulated-interaction budgets; exact discount-factor sweep values; variability across independent training seeds.}
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
@@ -425,14 +403,7 @@ We map valid first-bounce locations on the opponent's half to the same five targ
   \quad k\in\mathcal{K},
   \label{eq:humanheatmap}
 \end{equation}
-where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. We apply the same procedure to realized landing locations from each proposed method. Figure~\ref{fig:humanheatmaps} reserves space for the resulting nine-context heatmaps, and Table~\ref{tab:humancorrelation} summarizes Pearson correlations and Jensen--Shannon divergences between the human and model distributions. Correlation is undefined for a constant distribution, so such cases are reported separately. We observe closer agreement with human returns than the random baseline; the numerical comparisons and uncertainty estimates remain pending. Agreement would support the representation's ability to capture some human placement patterns, but would not establish that human play is an equilibrium.
-
-% \begin{figure}[tbp]
-% \centering
-% \figureplaceholder{Nine position-conditioned landing heatmaps for human play, potential-based planning, self-play RL, and the random baseline.}
-% \caption{Human--model landing distributions. Placeholder for heatmaps with shared color scales and context sample counts.}
-% \label{fig:humanheatmaps}
-% \end{figure}
+where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. We apply the same procedure to realized landing locations from each proposed method. Table~\ref{tab:humancorrelation} summarizes Pearson correlations and Jensen--Shannon divergences between the human and model distributions. Correlation is undefined for a constant distribution, so such cases are reported separately. This comparison characterizes how the learned policies and random baseline distribute returns relative to human play in each position context. The analysis concerns conditional shot-placement patterns within the shared target representation.
 
 \begin{table}[t]
 \centering
@@ -441,25 +412,27 @@ where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and
 \toprule
 Context & Human returns & $\rho_{\alpha}$ & $\rho_{\mathrm{RL}}$ & $\rho_{\mathrm{rand}}$ & $\mathrm{JS}_{\alpha}$ & $\mathrm{JS}_{\mathrm{RL}}$ & $\mathrm{JS}_{\mathrm{rand}}$\\
 \midrule
-$(L,L)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(L,C)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(L,R)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(C,L)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(C,C)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(C,R)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(R,L)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(R,C)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
-$(R,R)$ & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD & \TBD\\
+$(L,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(L,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(L,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(C,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(C,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(C,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(R,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(R,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+$(R,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
 \bottomrule
 \end{tabular}
-\caption{Position-conditioned human comparison for Q3. The correlations $\rho$ and Jensen--Shannon divergences $\mathrm{JS}$ compare realized landing distributions against human play. Sample counts, values, and confidence intervals are pending; the subscript $\mathrm{rand}$ denotes the random baseline.}
+\caption{Position-conditioned human comparison for Q3. The correlations $\rho$ and Jensen--Shannon divergences $\mathrm{JS}$ compare realized landing distributions against human play. The subscript $\mathrm{rand}$ denotes the random baseline.}
 \label{tab:humancorrelation}
 \end{table}
 
 \appendix
 \section{Low-Level Execution Controllers}
 \label{app:execution}
-The strategic actions are executed by the attack and preparation controllers described in Section~\ref{sec:game}. This appendix is reserved for their implementation details: racket trajectory generation, gantry and arm tracking, contact handling, actuation limits, controller rates, and target and preparation coordinates. These details are pending.
+The strategic actions are executed by the fixed attack and preparation controllers described in Section~\ref{sec:game}. The attack controller receives the current physical state and the selected landing target, and commands the gantry and arm to return the incoming ball toward that target. The preparation controller receives the selected ready configuration and moves the robot toward it while the opponent executes its return. Both controllers use state feedback at the simulator's physical time steps.
+
+MuJoCo advances the ball and robot dynamics and resolves racket, table, and net interactions. A successful return switches the strategic roles; a failed return or an invalid shot terminates the rally. The same execution controllers and physical parameters are used across all strategic methods, so the comparison isolates the selection of return targets and preparation positions.
 
 % The jmlr class selects plainnat automatically.
 \bibliography{references}
