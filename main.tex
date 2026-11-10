@@ -191,7 +191,16 @@ Following the dynamic $\alpha$-potential framework \citep{guo2023markov,guo2024d
   \in\Theta=\mathcal{K}\times\mathcal{M}.
   \label{eq:compacttheta}
 \end{equation}
-The two components specify the first exchange, giving $5\times3=15$ joint profiles. Subsequent attack and preparation choices are random and use the same continuation rule for every candidate profile. For each fixed initial state, unilateral deviations change only that player's first-exchange choice. Appendix~\ref{app:valuelearning} formalizes the rollout policy and data collection.
+The two components specify the first exchange, giving $5\times3=15$ joint profiles. Let $\mu^i(\cdot\mid x_h)$ be the common random continuation policy, supported on player $i$'s action set at $x_h$. At rollout exchange $h$, the evaluated policy is
+\begin{equation}
+  \pi_h^i(\cdot\mid x_h;\theta^i)=
+  \begin{cases}
+    \delta_{\theta^i}, & h=0,\\
+    \mu^i(\cdot\mid x_h), & h\geq1,
+  \end{cases}
+  \label{eq:firstexchangepolicy}
+\end{equation}
+where $\delta_{\theta^i}$ assigns probability one to the selected initial action. Role switching determines whether later random actions select return targets or preparation positions. The continuation rule is unchanged across candidate profiles and unilateral deviations; only the initial choice varies. The online planner evaluates this family anew at each exchange. Appendix~\ref{app:valuelearning} describes data collection and value estimation.
 
 \begin{definition}[Dynamic $\alpha$-potential function]
 A function $\Phi:\States\times\Theta\to\R$ is an $\alpha$-potential function for the chosen policy family if, for every $x\in\States$, $i\in\Players$, $\theta\in\Theta$, and alternative $\theta^{i\prime}\in\Theta^i$,
@@ -250,9 +259,15 @@ Against a baseline opponent, the opponent retains its own policy. The feedback p
 
 \subsection{Self-Play Reinforcement Learning}
 \label{sec:selfplay}
-We also learn strategic policies through self-play using PPO with a learned value baseline \citep{schulman2017ppo}, building on hierarchical table tennis learning \citep{mahjourian2018hierarchical}. Each actor maps the exchange state and current role to categorical distributions over five return targets and three preparation positions. The active role determines which distribution selects the action. The actor uses the same physical observations and execution controllers as the potential planner, while conditioning its action probabilities on each new state.
+We also learn strategic policies through self-play using PPO with a learned value baseline \citep{schulman2017ppo}, building on hierarchical table tennis learning \citep{mahjourian2018hierarchical}. For player $i$, a neural actor with parameters $\psi_i$ maps the exchange state and current role to two categorical distributions,
+\begin{equation}
+  p_{\psi_i}^{\attack}(\cdot\mid x_t)\in\Delta_5,
+  \qquad p_{\psi_i}^{\defend}(\cdot\mid x_t)\in\Delta_3.
+  \label{eq:rlheads}
+\end{equation}
+Here $\Delta_d$ is the probability simplex over $d$ actions. The active role determines which distribution selects the action. The actor uses the same physical observations and execution controllers as the potential planner, while conditioning its action probabilities on each new state.
 
-We alternate learner updates against opponents sampled from a pool of frozen snapshots, holding the opponent fixed throughout each rally. We freeze the trained policies for evaluation and compare sampled actions with deterministic argmax selection. Appendix~\ref{app:selfplay} describes the actor heads, critic targets, and opponent updates.
+We alternate learner updates against opponents sampled from a pool of frozen snapshots, holding the opponent fixed throughout each rally. We freeze the trained policies for evaluation and compare sampled actions with deterministic argmax selection. Appendix~\ref{app:selfplay} details critic targets and opponent updates.
 
 \section{Results}
 \label{sec:results}
@@ -353,8 +368,7 @@ Figure~\ref{fig:discountfactor} reports the discount-factor sweep for $\alpha$-p
 
 \subsection{Correspondence with Human Table Tennis}
 \label{sec:resultshuman}
-We compare simulated returns with human play reconstructed by LATTE-MV \citep{etaat2025latte}.
-Human and robot exchanges share a table coordinate frame, five return regions, and nine attacker--opponent position contexts. Pearson correlation and Jensen--Shannon divergence characterize agreement between the resulting conditional landing distributions. Appendix~\ref{app:humananalysis} describes the video processing, context assignment, and distribution estimates; Table~\ref{tab:humancorrelation} provides the position-conditioned comparison.
+We compare human returns reconstructed by LATTE-MV \citep{etaat2025latte} with simulated returns in a shared table frame, using five return regions and nine attacker--opponent position contexts. Pearson correlation and Jensen--Shannon divergence measure agreement between conditional landing distributions. Appendix~\ref{app:humananalysis} details processing; Table~\ref{tab:humancorrelation} presents the comparison.
 
 % Flush main-text floats before the references.
 \clearpage
@@ -376,19 +390,8 @@ For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alp
 \end{align*}
 \end{proof}
 
-\section{First-Exchange Policies, Value Estimation, and Rollout Truncation}
+\section{Value Estimation and Rollout Truncation}
 \label{app:valuelearning}
-For a rollout initialized at $x_0=x$, we index exchanges by $h=0,1,\ldots$. The current attacker has parameter $\theta^{\iota_0}=w^{\attack,\iota_0}\in\mathcal{K}$ and the current defender has parameter $\theta^{\jmath_0}=w^{\defend,\jmath_0}\in\mathcal{M}$. Let $\mu^i(\cdot\mid x_h)$ denote the common random continuation policy, with support on the action set corresponding to player $i$'s role at $x_h$. The evaluated policy is
-\begin{equation}
-  \pi_h^i(\cdot\mid x_h;\theta^i)=
-  \begin{cases}
-    \delta_{\theta^i}, & h=0,\\
-    \mu^i(\cdot\mid x_h), & h\geq1,
-  \end{cases}
-  \label{eq:firstexchangepolicy}
-\end{equation}
-where $\delta_{\theta^i}$ assigns probability one to the selected initial action. Role switching determines whether later random actions select return targets or preparation positions. The continuation rule is unchanged across candidate profiles and unilateral deviations. The parameters therefore identify the first-exchange pair, rather than fixed target and preparation choices throughout the rally. The online planner applies this evaluation anew at each exchange.
-
 Random skill selection at every exchange produces the data for this family. For a sampled state $x$, its realized attack and preparation choices define $\theta$, and the remaining trajectory follows the random continuation rule. Returns conditioned on $(x,\theta)$ provide value targets, with additional continuations estimating the expected return for alternative initial choices.
 
 We generate continuations from diverse exchange states and first-exchange profiles using Equation~\eqref{eq:firstexchangepolicy}. For continuation length $H$, each rollout provides
@@ -401,13 +404,7 @@ with zero rewards after a point terminates. Repeated rollouts estimate expected 
 
 \section{Self-Play RL Training}
 \label{app:selfplay}
-We also learn strategic policies by self-play, building on hierarchical table tennis learning \citep{mahjourian2018hierarchical}. For player $i$, a neural actor with parameters $\psi_i$ maps the exchange state and current role to two categorical distributions,
-\begin{equation}
-  p_{\psi_i}^{\attack}(\cdot\mid x_t)\in\Delta_5,
-  \qquad p_{\psi_i}^{\defend}(\cdot\mid x_t)\in\Delta_3.
-  \label{eq:rlheads}
-\end{equation}
-Here $\Delta_d=\{p\in\R_{\geq0}^d:\sum_{j=1}^{d}p_j=1\}$ is the probability simplex. Only the head corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. The actor conditions its strategic probabilities on each new state throughout the rally. In contrast, Equation~\eqref{eq:firstexchangepolicy} evaluates an initial action followed by random continuation; the deployed potential planner recomputes that initial action at every exchange.
+Only the actor head in Equation~\eqref{eq:rlheads} corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. The actor conditions its strategic probabilities on each new state throughout the rally. In contrast, Equation~\eqref{eq:firstexchangepolicy} evaluates an initial action followed by random continuation; the deployed potential planner recomputes that initial action at every exchange.
 
 \paragraph{Training objective and opponent updates.}
 We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
