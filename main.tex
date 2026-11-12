@@ -502,4 +502,77 @@ The strategic actions are executed by the fixed attack and preparation controlle
 
 MuJoCo advances the ball and robot dynamics and resolves racket, table, and net interactions. The returned ball's net crossing switches the strategic roles; a failed return or an invalid shot terminates the rally. The same execution controllers and physical parameters are used across all strategic methods, so the comparison isolates the selection of return targets and preparation positions.
 
+\subsection{Reinforcement Learning for Racket-Pose Tracking}
+\label{app:trackertraining}
+The low-level controller is pretrained with PPO \citep{schulman2017ppo} on a single-robot racket-pose tracking task. The robot consists of a seven-joint KUKA iiwa arm and a two-axis gantry. The training environment supplies a sequence of desired racket poses, and the policy learns continuous commands that reduce pose error. This pretraining is independent of the strategic self-play policies: shot placement enters the tracker through its desired pose, while the tracker reward measures execution quality.
+
+\paragraph{Observations and actions.}
+The observation has 68 entries: nine robot positions, nine velocities, three position errors, four relative quaternion components, seven desired pose components, and four previous actions with nine entries each. The relative rotation is $R_s^\star R_s^\top$, where $R_s$ and $R_s^\star$ denote the current and desired racket orientations. The action history stores commands scaled by 0.1. The desired position and quaternion provide absolute target information in addition to the pose errors.
+
+Each policy action $a_s\in[-1,1]^9$ contains two gantry commands followed by seven arm commands. With the training configuration, the commands are applied as
+\begin{equation}
+\begin{aligned}
+ g_s^+&=\operatorname{clip}_{\mathcal G}\big(g_s+0.01a_s^{1:2}\big),\\
+ u_s^{\mathrm{arm}}&=q_s^{\mathrm{arm}}+0.1a_s^{3:9},
+ \qquad \mathcal G=[-1.2,-0.3]\times[-1,1].
+\end{aligned}
+ \label{eq:trackeraction}
+\end{equation}
+Here $g_s$ is the gantry position and $u_s^{\mathrm{arm}}$ is the arm position-control target. Gantry coordinates are updated directly before the physics step; the arm uses position servos with proportional and velocity gains of 2000 and 200. Each action advances one MuJoCo step of 0.01\,s, giving a 100\,Hz control rate.
+
+\paragraph{Target sampling and curriculum.}
+Target positions are sampled independently in robot-local coordinates from $[-0.5,0.2]$\,m longitudinally, $[-1.1,1.1]$\,m laterally, and $[0.75,1.05]$\,m vertically. Target orientations use a forward-facing racket normal with bounded random tilt and roll perturbations. Reaching a target resamples the desired pose within the same episode. Episodes contain at most 1000 simulator steps, corresponding to 10\,s; the first two episodes use randomized initial step counters.
+
+Define the weighted pose error
+\begin{equation}
+ C_s=10\|p_s-p_s^\star\|_2
+     +10\operatorname{angle}\big(R_s^\star R_s^\top\big),
+ \label{eq:trackerposeerror}
+\end{equation}
+with rotation angle in radians. A target is resampled when $C_s<\tau(n)$, where
+\begin{equation}
+ \tau(n)=1+1.5\exp\!\left(-\frac{n}{46{,}875}\right)
+ \label{eq:trackercurriculum}
+\end{equation}
+and $n$ counts cumulative control steps in each training environment. The tolerance therefore decreases from 2.5 toward 1.0. Evaluation fixes the tolerance at 1.0.
+
+\paragraph{Tracking reward.}
+Between target changes, PPO receives the reduction in weighted pose error, together with an action-effort penalty. At the action scales in Equation~\eqref{eq:trackeraction}, the implemented reward is
+\begin{equation}
+ r_s^{\mathrm{track}}=C_{s-1}-C_s-\frac{1}{90}\|a_s\|_1.
+ \label{eq:trackerreward}
+\end{equation}
+The implementation applies an effort penalty of $\|0.1a_s\|_1/9$, yielding the coefficient in Equation~\eqref{eq:trackerreward}. On a target-resampling step, the returned reward is set to zero and the pose-error baseline is recomputed for the new target. Observations are assembled before resampling, so the newly drawn target enters the following observation. This shaping reward trains racket execution separately from the competitive point utility in Equation~\eqref{eq:reward}.
+
+\paragraph{PPO training configuration.}
+The actor and critic each have three hidden layers with widths $512$, $256$, and $128$, using ELU activations. Training uses 256 vectorized environments, 50 rollout steps per environment, and five PPO optimization epochs per rollout. The learning rate is $5\times10^{-4}$ and the discount factor is 0.99. Table~\ref{tab:trackertraining} lists the configured training settings. Although the requested minibatch size is 32,768, each rollout contains only $256\times50=12,800$ transitions; each optimization epoch therefore uses one minibatch containing 12,800 transitions. Deterministic evaluation averages ten episodes every 2000 vectorized control steps, and the checkpoint with the highest mean evaluation return is retained.
+
+\begin{table}[tbp]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Setting & Value\\
+\midrule
+Actor / critic hidden layers & $(512,256,128)$ / $(512,256,128)$\\
+Activation & ELU\\
+Vectorized environments & 256\\
+Rollout steps per environment & 50\\
+Transitions per rollout & 12,800\\
+Requested / effective minibatch & 32,768 / 12,800\\
+Optimization epochs per rollout & 5\\
+Learning rate & $5\times10^{-4}$\\
+Discount factor & 0.99\\
+Configured training budget & $10^8$ environment transitions\\
+Evaluation interval & 2000 vectorized steps (512,000 transitions)\\
+Evaluation episodes & 10, deterministic actions\\
+\bottomrule
+\end{tabular}
+\caption{Low-level pose-tracker PPO configuration. The effective minibatch is limited by the number of transitions in a rollout.}
+\label{tab:trackertraining}
+\end{table}
+
+\paragraph{Deployment in the competitive environment.}
+A ballistic targeting module predicts candidate interception positions and reflected ball velocities, then chooses a racket normal that minimizes predicted landing error relative to the strategic return target. The resulting position and orientation are supplied to the frozen pose tracker. The same checkpoint is evaluated deterministically for both robots using their local robot states, target-pose errors, and action histories; their nine-dimensional commands are concatenated into the two-robot action. Thus, strategic target selection, analytic racket-pose generation, and learned pose tracking form successive stages of the execution interface.
+
 \end{document}

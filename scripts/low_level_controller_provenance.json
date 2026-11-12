@@ -1,0 +1,177 @@
+{
+  "review_date": "2026-11-12",
+  "source_directory": "User-supplied vis scripts 2",
+  "training_entrypoint": "train.py -> mujoco_env_kuka_with_gantry.KukaTennisEnv",
+  "sources": [
+    {
+      "file": "train.py",
+      "sha256": "30c7d55d38552b0d66f9754fe6e88f2ca03b74732df9eaa30f337447d252e479",
+      "relevant_functions": [
+        {
+          "name": "make_env",
+          "start_line": 13,
+          "end_line": 17
+        }
+      ]
+    },
+    {
+      "file": "mujoco_env_kuka_with_gantry.py",
+      "sha256": "e0384e22422ac5144844d3b76c0b1e324eb9bdfbf9bc1ed998a558a32b7ba075",
+      "relevant_functions": [
+        {
+          "name": "__init__",
+          "start_line": 31,
+          "end_line": 63
+        },
+        {
+          "name": "step",
+          "start_line": 78,
+          "end_line": 137
+        },
+        {
+          "name": "reset_target",
+          "start_line": 139,
+          "end_line": 157
+        },
+        {
+          "name": "reset",
+          "start_line": 160,
+          "end_line": 188
+        },
+        {
+          "name": "_calculate_reward",
+          "start_line": 202,
+          "end_line": 222
+        }
+      ]
+    },
+    {
+      "file": "iiwa14_gantry.xml",
+      "sha256": "51f96bdcc28aac754231899fd9ee7de02fb99d8bc6e2c8b10c907b8f69e564cb"
+    },
+    {
+      "file": "mujoco_env_comp.py",
+      "sha256": "b786b5fa1c63d25e3f02ed52367bf257f2429ec7d6145ef63f6efef580af97e5",
+      "relevant_functions": [
+        {
+          "name": "__init__",
+          "start_line": 185,
+          "end_line": 239
+        },
+        {
+          "name": "update_target_racket_pose",
+          "start_line": 351,
+          "end_line": 424
+        },
+        {
+          "name": "step",
+          "start_line": 505,
+          "end_line": 668
+        },
+        {
+          "name": "reset_target",
+          "start_line": 670,
+          "end_line": 688
+        },
+        {
+          "name": "reset",
+          "start_line": 691,
+          "end_line": 742
+        },
+        {
+          "name": "_calculate_reward",
+          "start_line": 776,
+          "end_line": 802
+        }
+      ]
+    },
+    {
+      "file": "diagnostic_fixed_skill.py",
+      "sha256": "c6a83a609f5ec6e91a51ee6d6983b4581f4b7d7baaaf10b4b2c9408aef80597d",
+      "relevant_functions": [
+        {
+          "name": "build_ppo_obs",
+          "start_line": 173,
+          "end_line": 189
+        }
+      ]
+    }
+  ],
+  "training_configuration": {
+    "algorithm": "Stable-Baselines3 PPO MlpPolicy",
+    "actor_hidden_layers": [
+      512,
+      256,
+      128
+    ],
+    "critic_hidden_layers": [
+      512,
+      256,
+      128
+    ],
+    "activation": "ELU",
+    "n_envs": 256,
+    "vectorization": "DummyVecEnv",
+    "n_steps": 50,
+    "rollout_transitions": 12800,
+    "requested_batch_size": 32768,
+    "effective_batch_size": 12800,
+    "n_epochs": 5,
+    "learning_rate": 0.0005,
+    "gamma": 0.99,
+    "configured_transition_budget": 100000000,
+    "evaluation_frequency_vector_steps": 2000,
+    "evaluation_frequency_aggregate_transitions": 512000,
+    "evaluation_episodes": 10,
+    "evaluation_deterministic": true
+  },
+  "observation_components": {
+    "robot_positions": 9,
+    "robot_velocities": 9,
+    "position_error": 3,
+    "relative_quaternion": 4,
+    "desired_pose": 7,
+    "scaled_action_history": 36
+  },
+  "control": {
+    "action_dimension": 9,
+    "action_bounds": [
+      -1,
+      1
+    ],
+    "arm_joint_increment_scale": 0.1,
+    "gantry_increment_scale": 0.01,
+    "physics_timestep_s": 0.01,
+    "position_servo_gain": 2000,
+    "velocity_servo_gain": 200,
+    "python_gantry_command_clipping": [
+      [
+        -1.2,
+        -0.3
+      ],
+      [
+        -1,
+        1
+      ]
+    ]
+  },
+  "reward": {
+    "pose_cost": "C=10*position_error_l2+10*relative_rotation_angle_rad",
+    "ordinary_step": "C_previous-C_current-action_l1/90",
+    "retarget_step_reward": 0,
+    "history_action_scale": 0.1,
+    "original_effort_coefficient": "150/(9000*0.15)",
+    "curriculum": "tau(n)=1+1.5*exp(-n/(12000000/256)); n is cumulative steps per environment",
+    "evaluation_tolerance": 1
+  },
+  "reproducibility_notes": [
+    "The simulator task used by train.py is pose tracking, not strategic self-play or a direct ball-return reward.",
+    "The requested minibatch exceeds the rollout buffer; each PPO epoch processes one batch of 12800 transitions.",
+    "The vectorization is DummyVecEnv; 256 environments do not imply 256 subprocess workers.",
+    "The 100-million-transition value is a configured budget, not evidence of a completed run.",
+    "All nine history entries are scaled by the joint action factor, including gantry commands.",
+    "step() constructs its returned observation before resampling an attained target; the returned target fields describe the preceding target on that retargeting call.",
+    "The gantry slider XML limits differ from the Python command clipping. The paper reports command clipping, not a certified reachable workspace.",
+    "train_finetune.py imports a separate ROS arm-only environment; it is not called by the gantry tracker training entrypoint."
+  ]
+}
