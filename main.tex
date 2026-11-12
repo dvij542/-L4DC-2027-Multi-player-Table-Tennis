@@ -248,21 +248,23 @@ Potential learning has two stages. First, for each sampled state $x$, we solve a
  \text{subject to}\quad
  \big|p_{x,\theta}-p_{x,(\theta^{i\prime},\theta^{-i})}
  &-\big[Q_x^i(\theta)-Q_x^i(\theta^{i\prime},\theta^{-i})\big]\big|\leq y,\\
- &\forall(i,\theta,\theta^{i\prime})\in\mathcal D_x.
+ &\forall(i,\theta,\theta^{i\prime})\in\mathcal D_x,\\
+ &p_{x,\theta_{\mathrm{ref}}}=0.
 \end{aligned}
  \label{eq:potentialtraining}
 \end{equation}
-Here $\mathcal D_x$ contains every admissible unilateral deviation among the fifteen profiles, with roles fixed by $x$. Each absolute-value constraint is represented by two linear inequalities. The Q-values are fixed coefficients; the potential network is absent from this LP.
+Here $\mathcal D_x$ contains every admissible unilateral deviation among the fifteen profiles. Each absolute-value constraint gives two linear inequalities. The reference $\theta_{\mathrm{ref}}=(1,1)$ is the first target--preparation pair, stored as array entry $[0,0]$ in V3. This zero anchor fixes the additive offset across states; the other fourteen values have no sign bounds.
 
-Second, we use the returned LP values directly, without offset normalization, as supervised targets for a feed-forward potential network. For the sampled training states $\mathcal X_{\mathrm{train}}$, we minimize
+Second, the potential network is trained on the anchored LP labels using
 \begin{equation}
  \min_\varphi\;
- \frac{1}{15|\mathcal X_{\mathrm{train}}|}
- \sum_{x\in\mathcal X_{\mathrm{train}}}\sum_{\theta\in\Theta}
- \big(\Phi_\varphi(x,\theta)-p_{x,\theta}^\star\big)^2.
+ \mathcal L_{\mathrm{abs}}
+ +\lambda_{\mathrm{LP}}\mathcal L_{\mathrm{LPdiff}}
+ +\lambda_Q\mathcal L_{\mathrm{Qdiff}},
+ \qquad \lambda_{\mathrm{LP}}=\lambda_Q=1.
  \label{eq:potentialregression}
 \end{equation}
-The true unilateral discrepancy is bounded by $y_x^\star+2\beta_x+2\varepsilon_x$ when Q-estimation and regression errors are uniformly bounded by $\beta_x$ and $\varepsilon_x$. Appendix~\ref{app:potentialerrors} gives the derivation and equilibrium interpretation.
+The three MSE terms fit absolute LP values, all profile-pair LP differences, and Q-based unilateral utility differences, respectively. The absolute-potential MSE includes the zero reference target; the network itself is not hard-constrained to output zero there. Appendix~\ref{app:potentialerrors} defines the losses and derives the approximation bound.
 
 \paragraph{Online phase.}
 Given exchange state $x_t$, we optimize the learned function over the joint discrete policy parameters:
@@ -414,6 +416,26 @@ For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alp
 
 \section{Error Propagation in Two-Stage Potential Learning}
 \label{app:potentialerrors}
+\paragraph{Anchored labels and composite regression.}
+Equation~\eqref{eq:potentialtraining} fixes $p_{x,\theta_{\mathrm{ref}}}^\star=0$ for every sampled state, with $\theta_{\mathrm{ref}}=(1,1)$ corresponding to array entry $[0,0]$. Adding a nonzero constant violates this constraint, so the labels share a consistent origin across states. The remaining fourteen values are free real variables subject to the discrepancy inequalities. The anchor removes the additive ambiguity without requiring the rest of the optimal table to be unique. Labels retain this reference value; no mean centering is applied.
+
+Write $f_x(\theta)=\Phi_\varphi(x,\theta)$ and define $\Delta_{\theta,\theta'} f_x=f_x(\theta)-f_x(\theta')$, with the same difference operator for $p_x^\star$. The regression terms are
+\begin{equation}
+\begin{aligned}
+ \mathcal L_{\mathrm{abs}}
+ &=\mathbb E_{x,\theta}\big[(f_x(\theta)-p_{x,\theta}^\star)^2\big],\\
+ \mathcal L_{\mathrm{LPdiff}}
+ &=\mathbb E_{x,(\theta,\theta')\in\mathcal P_x}
+   \big[(\Delta_{\theta,\theta'} f_x-\Delta_{\theta,\theta'}p_x^\star)^2\big],\\
+ \mathcal L_{\mathrm{Qdiff}}
+ &=\mathbb E_{x,(i,\theta,\theta^{i\prime})\in\mathcal D_x}
+   \big[e_\varphi(x,i,\theta,\theta^{i\prime})^2\big].
+\end{aligned}
+ \label{eq:potentiallosses}
+\end{equation}
+These expectations denote empirical averages over training states, profiles, and pairs. The LP-difference loss uses $\mathcal P_x=\Theta\times\Theta$, covering all 225 ordered pairs of the fifteen profiles. The Q-difference term uses unilateral deviations and the frozen Q-values in Equation~\eqref{eq:potentialresidual}. Both difference-loss weights default to one, as shown in Equation~\eqref{eq:potentialregression}. The absolute term fits the anchored values, while the difference terms fit their strategic variations. In particular, the reference output is trained toward zero through $\mathcal L_{\mathrm{abs}}$, without an output-layer constraint enforcing it exactly.
+
+\paragraph{Approximation error.}
 Fix a sampled state $x$ and its initial role assignment. Suppose the Q-network and potential network satisfy
 \begin{equation}
 \begin{aligned}
@@ -431,7 +453,7 @@ For any unilateral deviation, the triangle inequality gives
 \end{aligned}
  \label{eq:twostageerror}
 \end{equation}
-The LP contributes $y_x^\star$, the two Q-estimation errors contribute at most $2\beta_x$, and the two regression errors contribute at most $2\varepsilon_x$. A uniform bound across initial states supplies the $\alpha$ required by Proposition~\ref{prop:potential}; adding an online optimization gap $\lambda$ gives the corresponding $(\alpha+\lambda)$-equilibrium guarantee. The regression objective in Equation~\eqref{eq:potentialregression} measures average squared fitting error, while this guarantee uses uniform error. Empirical unilateral response gains assess the deployed feedback policies.
+The LP contributes $y_x^\star$, the two Q-estimation errors contribute at most $2\beta_x$, and the two regression errors contribute at most $2\varepsilon_x$. A uniform bound across initial states supplies the $\alpha$ required by Proposition~\ref{prop:potential}; adding an online optimization gap $\lambda$ gives the corresponding $(\alpha+\lambda)$-equilibrium guarantee. The composite regression objective in Equation~\eqref{eq:potentialregression} uses empirical MSE terms, while this guarantee uses uniform error. Empirical unilateral response gains assess the deployed feedback policies.
 
 \section{Self-Play and Potential-Based Policy Representations}
 \label{app:selfplay}
