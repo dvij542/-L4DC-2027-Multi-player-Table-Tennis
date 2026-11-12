@@ -306,7 +306,7 @@ Iterated best response (IBR) alternates unilateral updates of the attack and pre
 The $\alpha$-potential planner selects strategic actions by optimizing the learned potential function, as described in Section~\ref{sec:approximation}.
 
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential self-play are 72.5\%, 56.8\%, and 50.0\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher static-opponent and random-opponent win rates, reaching 82.0\% against Random. Sampled deployment achieves 77.0\% against IBR, compared with 75.3\% for argmax. Win rates measure competitive performance. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential self-play are 72.5\%, 56.8\%, and 50.0\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates on all four metrics, reaching 84.8\% against Random and 82.5\% against Q-based IBR, compared with 79.2\% and 78.8\% for sampled deployment. Win rates measure competitive performance. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
@@ -316,11 +316,11 @@ Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and t
 Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{IBR\\($H=5$)} & $\alpha$-potential & \shortstack{Self-play RL \\(argmax)} & \shortstack{Self-play RL \\(sampled)}\\
 \midrule
 $\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 56.8\% & 50.0\% & -- & --\\
-Self-play RL (argmax) & 79.1\% & 60.8\% & 82.0\% & 75.3\% & --- & 50.0\% & --\\
-Self-play RL (sampled) & 77.0\% & 53.8\% & 76.7\% & 77.0\% & --- & -- & 50.0\%\\
+Self-play RL (argmax) & 84.3\% & 64.5\% & 84.8\% & 82.5\% & --- & 50.0\% & --\\
+Self-play RL (sampled) & 81.4\% & 60.5\% & 79.2\% & 78.8\% & --- & -- & 50.0\%\\
 \bottomrule
 \end{tabular}
-\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies.}
+\caption{Point win rates for Q1. Static mean and static minimum summarize performance against the fifteen fixed target--preparation strategies. Self-play matchups use Q-based IBR.}
 \label{tab:performance}
 \end{table}
 
@@ -342,8 +342,8 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
 $\alpha$-potential & \resultblank & \resultblank\\
-Self-play RL (sampled) & $0.07\pm0.09$ & $0.01\pm0.02$\\
-Self-play RL (argmax) & $0.08\pm0.13$ & $0.05\pm0.09$\\
+Self-play RL (sampled) & $0.05$ & $0.00$\\
+Self-play RL (argmax) & $0.13$ & $0.04$\\
 \bottomrule
 \end{tabular}
 \caption{Empirical unilateral response gains for each player. Self-play RL is evaluated with sampled and argmax action selection.}
