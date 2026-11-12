@@ -129,13 +129,10 @@ If Equation~\eqref{eq:nash} holds for every admissible initial state, the profil
 For singles table tennis, $\Players=\{1,2\}$. The attacker and defender are roles assigned to these players, rather than additional players. Let $\iota_t\in\Players$ denote the attacker during exchange $t$, and let $\jmath_t=3-\iota_t$ denote the defender. The attacker receives the currently incoming ball and is responsible for producing the next return. The defender, having produced the preceding shot, prepares to receive the attacker's forthcoming return. The terms refer to these responsibilities even when a shot is tactically conservative. Each robot consists of a KUKA iiwa arm with a racket mounted on its end effector and a base mounted on a drivable gantry (Figure~\ref{fig:environment}).
 
 \paragraph{Exchange timing and role switching.}
-An exchange begins when the incoming ball crosses the net toward the current attacker. This crossing marks the strategic decision epoch: the state is sampled, the attacker selects a return target, and the defender selects a preparation position. The execution controllers then track these choices while the attacker returns the ball and the defender prepares. When the returned ball crosses the net and the rally continues, the next exchange begins with $(\iota_{t+1},\jmath_{t+1})=(\jmath_t,\iota_t)$. A rally that terminates before the next crossing transitions directly to a terminal state.
-
-The previous defender now receives the ball and becomes the attacker. An invalid incoming shot or a failed return terminates the rally and assigns its point outcome. The initialization specifies the first incoming ball and the corresponding attacker, allowing rally strategy to be studied without prescribing a separate serving controller. Strategic epochs therefore index exchanges, while the simulator and robot controllers execute at finer physical time steps.
+An exchange begins when the incoming ball crosses the net toward the attacker. At this crossing, the state is sampled, the attacker selects a return target, and the defender selects a preparation position. The returned ball's next net crossing starts a new exchange with $(\iota_{t+1},\jmath_{t+1})=(\jmath_t,\iota_t)$. A failed return or invalid shot terminates the rally. Appendix~\ref{app:execution} details the exchange initialization and timing.
 
 \paragraph{Joint state.}
-The state includes the variables needed to predict the consequences of both players' choices: $x_t=(b_t,z_t^1,z_t^2,\iota_t,\ell_t)$, where $b_t=(p_t^b,v_t^b,\omega_t^b)$.
-Here $p_t^b,v_t^b,\omega_t^b\in\R^3$ are the ball position, linear velocity, and angular velocity. The robot state $z_t^i$ contains its gantry position and joint angles, their velocities, and any actuator or controller state required for a Markov description. Racket poses follow from the robot kinematics. The discrete variable $\ell_t$ records rally status, including the last contact, bounce information, and terminal outcome. Keeping both robot states in $x_t$ preserves the effect of previous recovery and preparation motions on future returns.
+The state is $x_t=(b_t,z_t^1,z_t^2,\iota_t,\ell_t)$, where $b_t=(p_t^b,v_t^b,\omega_t^b)$ contains the ball position, velocity, and spin. Each $z_t^i$ includes gantry and joint positions, velocities, and controller state. Racket poses follow from kinematics, and $\ell_t$ records contact, bounce, and terminal status. Both robot states retain the effects of recovery and preparation on subsequent returns.
 
 \paragraph{Strategic actions and information.}
 Let $\mathcal{K}=\{1,\ldots,5\}$ index the return targets and $\mathcal{M}=\{1,2,3\}$ index the preparation positions. At exchange $t$, the attacker selects $k_t\in\mathcal{K}$ and the defender selects $m_t\in\mathcal{M}$, giving joint strategic action $(k_t,m_t)$. Equivalently,
@@ -231,10 +228,10 @@ We generate continuations from diverse exchange states and first-exchange profil
   r^i(x_h,a_h,x_{h+1}),
   \label{eq:rolloutreturn}
 \end{equation}
-with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We fit a value network $\widehat V^i_{\nu_i}(x,\theta)$ to these returns. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $\gamma<1$ and $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
+with zero rewards after a point terminates. Repeated rollouts estimate expected returns under action and transition randomness. We train a Q-network $\widehat V^i_{\nu_i}(x,\theta)$ on these discounted Monte Carlo returns, retaining the value notation used above. We split data by independently generated rallies, so that correlated states from one rally do not appear in both training and evaluation sets. A finite cutoff introduces a value-target error; for $\gamma<1$ and $|r^i|\leq R_{\max}$, the unobserved discounted tail is bounded by $R_{\max}\gamma^H/(1-\gamma)$.
 
 \paragraph{Offline phase: potential learning.}
-We represent $\Phi_\varphi(x,\theta)$ with a feed-forward neural network and construct unilateral-deviation samples $\mathcal{S}$ with entries $(x,i,\theta,\theta^{i\prime})$. We define the residual as
+After Q-network training, we freeze its parameters. For each sampled state $x$, its predictions form the $5\times3$ payoff matrix $Q_x^i(k,m)=\widehat V^i_{\nu_i}(x,(k,m))$ for player $i$. The neural potential's unilateral-deviation residual is
 \begin{equation}
 \begin{split}
  e_\varphi=&\ \Phi_\varphi(x,\theta)
@@ -244,14 +241,28 @@ We represent $\Phi_\varphi(x,\theta)$ with a feed-forward neural network and con
 \end{split}
  \label{eq:potentialresidual}
 \end{equation}
-We learn the network by minimizing the largest sampled discrepancy:
+Potential learning has two stages. First, for each sampled state $x$, we solve an LP over fifteen tabular potential values $p_x=(p_{x,\theta})_{\theta\in\Theta}$ and a discrepancy bound $y$:
 \begin{equation}
-  \min_{\varphi,\,y\geq0}\ y
-  \quad\text{subject to}\quad
-  |e_\varphi|\leq y\quad\text{for every sample in }\mathcal{S}.
-  \label{eq:potentialtraining}
+\begin{aligned}
+ (p_x^\star,y_x^\star)\in\operatorname*{arg\,min}_{p_x\in\R^{15},\,y\geq0}\;&y\\
+ \text{subject to}\quad
+ \big|p_{x,\theta}-p_{x,(\theta^{i\prime},\theta^{-i})}
+ &-\big[Q_x^i(\theta)-Q_x^i(\theta^{i\prime},\theta^{-i})\big]\big|\leq y,\\
+ &\forall(i,\theta,\theta^{i\prime})\in\mathcal D_x.
+\end{aligned}
+ \label{eq:potentialtraining}
 \end{equation}
-This finite-sample objective approximates the uniform requirement in Equation~\eqref{eq:alphapotential}. Under a uniform discrepancy bound of $y$ and a uniform value-estimation error of at most $\beta$, the true potential approximation error is at most $y+2\beta$. The uniform bound is the hypothesis required for the equilibrium guarantee; sampled residuals characterize the fit on the evaluated states and policy profiles. We assess the learned strategies through empirical unilateral response gains in simulation.
+Here $\mathcal D_x$ contains every admissible unilateral deviation among the fifteen profiles, with roles fixed by $x$. Each absolute-value constraint is represented by two linear inequalities. The Q-values are fixed coefficients; the potential network is absent from this LP.
+
+Second, we use the returned LP values directly, without offset normalization, as supervised targets for a feed-forward potential network. For the sampled training states $\mathcal X_{\mathrm{train}}$, we minimize
+\begin{equation}
+ \min_\varphi\;
+ \frac{1}{15|\mathcal X_{\mathrm{train}}|}
+ \sum_{x\in\mathcal X_{\mathrm{train}}}\sum_{\theta\in\Theta}
+ \big(\Phi_\varphi(x,\theta)-p_{x,\theta}^\star\big)^2.
+ \label{eq:potentialregression}
+\end{equation}
+The true unilateral discrepancy is bounded by $y_x^\star+2\beta_x+2\varepsilon_x$ when Q-estimation and regression errors are uniformly bounded by $\beta_x$ and $\varepsilon_x$. Appendix~\ref{app:potentialerrors} gives the derivation and equilibrium interpretation.
 
 \paragraph{Online phase.}
 Given exchange state $x_t$, we optimize the learned function over the joint discrete policy parameters:
@@ -274,8 +285,7 @@ We also learn strategic policies through self-play using PPO with a learned valu
 Here $\Delta_d$ is the probability simplex over $d$ actions. The active role determines which distribution selects the action. The actor uses the same physical observations and execution controllers as the potential planner, while conditioning its action probabilities on each new state.
 
 \paragraph{Training objective and opponent updates.}
-We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
-We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
+PPO alternates learner updates against frozen opponent snapshots, sampled once per rally. A learned critic provides advantage estimates and bootstraps truncated returns; entropy regularization encourages exploration. Player identities determine rewards and value targets through role switches. Appendix~\ref{app:selfplay} details these updates.
 
 We freeze the trained policies for evaluation and compare sampled actions with deterministic argmax selection. Appendix~\ref{app:selfplay} relates the neural actor to the potential planner's rollout policy.
 
@@ -402,9 +412,35 @@ For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alp
 
 
 
+\section{Error Propagation in Two-Stage Potential Learning}
+\label{app:potentialerrors}
+Fix a sampled state $x$ and its initial role assignment. Suppose the Q-network and potential network satisfy
+\begin{equation}
+\begin{aligned}
+ \max_{i,\theta}\big|\widehat V^i_{\nu_i}(x,\theta)-V^i(x,\theta)\big|&\leq\beta_x,\\
+ \max_\theta\big|\Phi_\varphi(x,\theta)-p_{x,\theta}^\star\big|&\leq\varepsilon_x.
+\end{aligned}
+ \label{eq:estimationerrors}
+\end{equation}
+For any unilateral deviation, the triangle inequality gives
+\begin{equation}
+\begin{aligned}
+ \big|&\Phi_\varphi(x,\theta)-\Phi_\varphi(x,\theta^{i\prime},\theta^{-i})\\
+ &-\big[V^i(x,\theta)-V^i(x,\theta^{i\prime},\theta^{-i})\big]\big|
+ \leq y_x^\star+2\beta_x+2\varepsilon_x.
+\end{aligned}
+ \label{eq:twostageerror}
+\end{equation}
+The LP contributes $y_x^\star$, the two Q-estimation errors contribute at most $2\beta_x$, and the two regression errors contribute at most $2\varepsilon_x$. A uniform bound across initial states supplies the $\alpha$ required by Proposition~\ref{prop:potential}; adding an online optimization gap $\lambda$ gives the corresponding $(\alpha+\lambda)$-equilibrium guarantee. The regression objective in Equation~\eqref{eq:potentialregression} measures average squared fitting error, while this guarantee uses uniform error. Empirical unilateral response gains assess the deployed feedback policies.
+
 \section{Self-Play and Potential-Based Policy Representations}
 \label{app:selfplay}
 Only the actor head in Equation~\eqref{eq:rlheads} corresponding to the active role selects an action. The actor receives the same physical information available to the potential-based planner, without access to the opponent's newly sampled action. The actor conditions its strategic probabilities on each new state throughout the rally. In contrast, Equation~\eqref{eq:firstexchangepolicy} evaluates an initial action followed by random continuation; the deployed potential planner recomputes that initial action at every exchange.
+
+\paragraph{Training objective and opponent updates.}
+We train each player to maximize its discounted point utility using proximal policy optimization (PPO) with a learned value baseline \citep{schulman2017ppo}. PPO optimizes a clipped probability-ratio surrogate using advantage estimates from the critic.
+We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
+
 
 \section{Human-Play Processing and Position-Conditioned Comparison}
 \label{app:humananalysis}
@@ -451,6 +487,15 @@ $(R,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultbla
 
 \section{Low-Level Execution Controllers}
 \label{app:execution}
+\paragraph{Exchange timing and role switching.}
+An exchange begins when the incoming ball crosses the net toward the current attacker. This crossing marks the strategic decision epoch: the state is sampled, the attacker selects a return target, and the defender selects a preparation position. The execution controllers then track these choices while the attacker returns the ball and the defender prepares. When the returned ball crosses the net and the rally continues, the next exchange begins with $(\iota_{t+1},\jmath_{t+1})=(\jmath_t,\iota_t)$. A rally that terminates before the next crossing transitions directly to a terminal state.
+
+The previous defender now receives the ball and becomes the attacker. An invalid incoming shot or a failed return terminates the rally and assigns its point outcome. The initialization specifies the first incoming ball and the corresponding attacker, allowing rally strategy to be studied without prescribing a separate serving controller. Strategic epochs therefore index exchanges, while the simulator and robot controllers execute at finer physical time steps.
+
+\paragraph{Joint state.}
+The state includes the variables needed to predict the consequences of both players' choices: $x_t=(b_t,z_t^1,z_t^2,\iota_t,\ell_t)$, where $b_t=(p_t^b,v_t^b,\omega_t^b)$.
+Here $p_t^b,v_t^b,\omega_t^b\in\R^3$ are the ball position, linear velocity, and angular velocity. The robot state $z_t^i$ contains its gantry position and joint angles, their velocities, and any actuator or controller state required for a Markov description. Racket poses follow from the robot kinematics. The discrete variable $\ell_t$ records rally status, including the last contact, bounce information, and terminal outcome. Keeping both robot states in $x_t$ preserves the effect of previous recovery and preparation motions on future returns.
+
 \paragraph{Controller interface.}
 
 The strategic actions are executed by the fixed attack and preparation controllers described in Section~\ref{sec:game}. The attack controller receives the current physical state and the selected landing target, and commands the gantry and arm to return the incoming ball toward that target. The preparation controller receives the selected ready configuration and moves the robot toward it while the opponent executes its return. Both controllers use state feedback at the simulator's physical time steps.
