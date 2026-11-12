@@ -332,7 +332,7 @@ For a frozen profile $\pi=(\pi^1,\pi^2)$, player $i$'s unilateral-deviation regr
   V^i(x;\widetilde\pi^i,\pi^{-i})-V^i(x;\pi).
   \label{eq:empiricalregret}
 \end{equation}
-Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search provides an empirical lower bound on this regret; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the self-play response gains.
+Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the indicated policies, and $\Pi^i_{\mathrm{eval}}$ is the evaluation response class. We approximate the supremum through response search against the frozen opponent and include the original policy among the candidates. The largest gain found by finite search provides an empirical lower bound on this regret; the profile-level Nash regret is $\max_i\mathcal{R}_i(x;\pi)$. Table~\ref{tab:regret} reports the $\alpha$-potential and self-play response gains.
 
 \begin{table}[tbp]
 \centering
@@ -341,7 +341,7 @@ Here $V^i(x;\pi)$ is the discounted value in Equation~\eqref{eq:value} under the
 \toprule
 Method & Player 1 response gain & Player 2 response gain\\
 \midrule
-$\alpha$-potential & \resultblank & \resultblank\\
+$\alpha$-potential & $0.02317$ & $0.01428$\\
 Self-play RL (sampled) & $0.05$ & $0.00$\\
 Self-play RL (argmax) & $0.13$ & $0.04$\\
 \bottomrule
