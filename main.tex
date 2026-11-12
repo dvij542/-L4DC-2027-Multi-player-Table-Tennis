@@ -253,7 +253,7 @@ Potential learning has two stages. First, for each sampled state $x$, we solve a
 \end{aligned}
  \label{eq:potentialtraining}
 \end{equation}
-Here $\mathcal D_x$ contains every admissible unilateral deviation among the fifteen profiles. Each absolute-value constraint gives two linear inequalities. The reference $\theta_{\mathrm{ref}}=(1,1)$ is the first target--preparation pair, stored as array entry $[0,0]$ in V3. This zero anchor fixes the additive offset across states; the other fourteen values have no sign bounds.
+Here $\mathcal D_x$ contains every admissible unilateral deviation among the fifteen profiles. Each absolute-value constraint gives two linear inequalities. The reference $\theta_{\mathrm{ref}}$ is the first target--preparation pair. This zero anchor fixes the additive offset across states; the other fourteen values have no sign bounds.
 
 Second, the potential network is trained on the anchored LP labels using
 \begin{equation}
