@@ -65,15 +65,13 @@ Our equilibrium approximation approach builds on the dynamic $\alpha$-potential 
 Our framework comprises two components:
 
 \paragraph{Modeling and environment.}
-We introduce a robot table tennis environment for evaluating game-theoretic algorithms with an explicit attacker--defender decomposition. The environment couples alternating strategic roles with ball dynamics, racket contacts, robot motion, and point outcomes.
-The environment is instantiated in MuJoCo with robots possessing a high number of degrees of freedom \citep{todorov2012mujoco}. This formulation provides a shared basis for implementing and comparing competitive planning and learning algorithms.
+We introduce a MuJoCo table tennis environment with an explicit attacker--defender decomposition and robots with a high number of degrees of freedom \citep{todorov2012mujoco}. Alternating strategic roles are coupled with ball dynamics, racket contacts, robot motion, and point outcomes, providing a shared environment for competitive planning and learning.
 
 \paragraph{Strategic planning and learning.}
-We propose an adaptation of $\alpha$-potential learning for approximate Nash equilibrium computation in the table tennis game. Offline interaction data are used to estimate long-term utilities and learn a function that approximates their changes under unilateral policy deviations. Online optimization of the learned function then produces candidate equilibrium policy parameters.
-Alongside this approach, we develop self-play reinforcement learning using the same strategic action interface and physical execution model. We compare both proposed approaches with relevant baselines under common observations, objectives, and evaluation conditions.
+We adapt $\alpha$-potential learning to table tennis: offline interaction data estimate unilateral utility changes, and online potential optimization selects approximate equilibrium parameters. We compare this planner with PPO self-play and relevant baselines using common observations, strategic actions, execution controllers, and evaluation objectives.
 
 \paragraph{Organization.}
-Section~\ref{sec:related} reviews related work in robot table tennis, competitive robotic games, and equilibrium approximation. Section~\ref{sec:model} introduces the dynamic-game preliminaries and the attacker--defender formulation. Section~\ref{sec:approximation} presents potential-based equilibrium approximation and self-play reinforcement learning. Section~\ref{sec:results} compares competitive performance and unilateral response gains, and examines training-data and discount-factor choices.
+Section~\ref{sec:related} reviews related work in robot table tennis, competitive robotic games, and equilibrium approximation. Section~\ref{sec:model} introduces the dynamic-game preliminaries and the attacker--defender formulation. Section~\ref{sec:approximation} presents potential-based equilibrium approximation and self-play reinforcement learning. Section~\ref{sec:results} compares competitive performance and unilateral response gains, and examines training-data and discount-factor choices. Section~\ref{sec:conclusion} concludes the paper.
 
 \section{Related Work}
 \label{sec:related}
@@ -222,14 +220,7 @@ $\Phi(x,\theta^*)\geq\sup_{\theta\in\Theta}\Phi(x,\theta)-\lambda$
 then $\theta^*$ is an $(\alpha+\lambda)$-Nash equilibrium at $x$ within the chosen policy family.
 \label{prop:potential}
 \end{proposition}
-\begin{proof}
-For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alphapotential} gives
-\begin{align*}
- V^i(x,\theta^i,\theta^{*,-i})-V^i(x,\theta^*)
- &\leq\Phi(x,\theta^i,\theta^{*,-i})-\Phi(x,\theta^*)+\alpha\\
- &\leq\lambda+\alpha.
-\end{align*}
-\end{proof}
+Appendix~\ref{app:potentialproof} gives the proof.
 
 \paragraph{Offline phase: value estimation.}
 Random skill selection at every exchange produces the data for this family. For a state $x$ sampled at a net crossing, its realized attack and preparation choices define $\theta$, and the remaining trajectory follows the random continuation rule. Returns conditioned on $(x,\theta)$ provide value targets, with additional continuations estimating the expected return for alternative initial choices.
@@ -385,6 +376,10 @@ Figure~\ref{fig:discountfactor} shows the discount-factor sweep for $\alpha$-pot
 \end{minipage}
 \end{figure}
 
+\section{Conclusion}
+\label{sec:conclusion}
+We presented an attacker--defender framework for competitive robot table tennis, with decisions at net crossings and shared execution controllers. A learned $\alpha$-potential selects among fifteen first-exchange action profiles, while PPO self-play learns state-dependent strategies. Evaluation distinguishes competitive win rates from empirical unilateral response gains: potential planning achieves small response gains, whereas argmax self-play attains higher win rates against the tested baselines. Additional training data improve fixed-opponent performance. This shared formulation supports direct comparison of equilibrium-aware planning and reinforcement learning.
+
 % Flush main-text floats before the references.
 \clearpage
 % The jmlr class selects plainnat automatically.
@@ -393,6 +388,19 @@ Figure~\ref{fig:discountfactor} shows the discount-factor sweep for $\alpha$-pot
 % Start supplementary material on a fresh page after all references.
 \clearpage
 \appendix
+\section{Proof of the Equilibrium Approximation}
+\label{app:potentialproof}
+For the first-exchange policy family, the initial roles and random continuation rule are fixed while each player varies its initial action. We prove Proposition~\ref{prop:potential} under these conditions.
+\begin{proof}
+For every player $i$ and admissible deviation $\theta^i$, Equation~\eqref{eq:alphapotential} gives
+\begin{align*}
+ V^i(x,\theta^i,\theta^{*,-i})-V^i(x,\theta^*)
+ &\leq\Phi(x,\theta^i,\theta^{*,-i})-\Phi(x,\theta^*)+\alpha\\
+ &\leq\lambda+\alpha.
+\end{align*}
+\end{proof}
+
+
 
 \section{Self-Play and Potential-Based Policy Representations}
 \label{app:selfplay}
