@@ -315,7 +315,7 @@ Iterated best response (IBR) alternates unilateral updates of the attack and pre
 The $\alpha$-potential planner selects strategic actions by optimizing the learned potential function, as described in Section~\ref{sec:approximation}.
 
 \paragraph{Competitive outcomes.}
-Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 80.7\% and 62.5\%, respectively; the win rates against Random, IBR, and $\alpha$-potential self-play are 72.5\%, 56.8\%, and 50.0\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment achieves higher win rates on all four metrics, reaching 84.8\% against Random and 82.5\% against Q-based IBR, compared with 79.2\% and 78.8\% for sampled deployment. Win rates measure competitive performance. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
+Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and two deployment modes of self-play RL against the baseline opponents. For $\alpha$-potential, the static mean and minimum are 85.9\% and 77.0\%, respectively; the win rates against Random, IBR, and $\alpha$-potential self-play are 75.0\%, 61.0\%, and 50.0\%. For self-play RL, argmax deployment selects the most probable action, whereas sampled deployment draws from the actor's categorical distribution. Argmax deployment outperforms sampled self-play on all four metrics, reaching 84.8\% against Random and 82.5\% against Q-based IBR, compared with 79.2\% and 78.8\% for sampled deployment. Win rates measure competitive performance. Following \citet{kalaria2025racer}, we also assess Nash regret through unilateral response gains, as defined below.
 \begin{table}[t]
 \centering
 \small
@@ -324,7 +324,7 @@ Table~\ref{tab:performance} reports point win rates for $\alpha$-potential and t
 \toprule
 Method & \shortstack{Static\\mean} & \shortstack{Static\\minimum} & Random & \shortstack{IBR\\($H=5$)} & $\alpha$-potential & \shortstack{Self-play RL \\(argmax)} & \shortstack{Self-play RL \\(sampled)}\\
 \midrule
-$\alpha$-potential & 80.7\% & 62.5\% & 72.5\% & 56.8\% & 50.0\% & 21.0\% & 32.7\%\\
+$\alpha$-potential & 85.9\% & 77.0\% & 75.0\% & 61.0\% & 50.0\% & 21.0\% & 32.7\%\\
 Self-play RL (argmax) & 84.3\% & 64.5\% & 84.8\% & 82.5\% & 79.0\% & 50.0\% & --\\
 Self-play RL (sampled) & 81.4\% & 60.5\% & 79.2\% & 78.8\% & 67.3\% & -- & 50.0\%\\
 \bottomrule
@@ -388,7 +388,7 @@ Figure~\ref{fig:discountfactor} shows the discount-factor sweep for $\alpha$-pot
 
 \section{Conclusion}
 \label{sec:conclusion}
-We presented an attacker--defender framework for competitive robot table tennis, with decisions at net crossings and shared execution controllers. A learned $\alpha$-potential selects among fifteen first-exchange action profiles, while PPO self-play learns state-dependent strategies. Evaluation distinguishes competitive win rates from empirical unilateral response gains: potential planning achieves small response gains, whereas argmax self-play attains higher win rates against the tested baselines. Additional training data improve fixed-opponent performance. This shared formulation supports direct comparison of equilibrium-aware planning and reinforcement learning.
+We presented an attacker--defender framework for competitive robot table tennis, with decisions at net crossings and shared execution controllers. A learned $\alpha$-potential selects among fifteen first-exchange action profiles, while PPO self-play learns state-dependent strategies. Potential planning achieves the strongest static-opponent results, while argmax self-play attains higher win rates against Random and IBR. Empirical response gains separately assess equilibrium quality. Additional training data improve fixed-opponent performance. This shared formulation supports direct comparison of equilibrium-aware planning and reinforcement learning.
 
 % Flush main-text floats before the references.
 \clearpage
