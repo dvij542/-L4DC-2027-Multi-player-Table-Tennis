@@ -1,10 +1,11 @@
 # Ablation data
 
-`ablation_training_size.csv` transcribes all nine percentages exactly from the user-supplied training-size table (November 10, 2026). The table does not specify the training-size unit or how the average static minimum is aggregated, so those details are not inferred.
+Both CSV files contain the alpha-potential measurements supplied by the user on November 13, 2026. These exact tabulated values supersede the earlier training-size table and digitized discount-factor image.
 
-`ablation_discount_factor.csv` approximately digitizes marker centers from the user-supplied plot titled `nash_q (group/gamma-associated results)`. Random-opponent values are approximately 70, 75, 75, 72.5, and 70%; static means are approximately 78, 76.5, 77.5, 75, and 76%. These are image-derived estimates, not original numerical logs. The source contains no point at gamma=0.7; the connecting line does not represent an additional measurement. No uncertainty data were supplied for either ablation.
+- `ablation_training_size.csv`: 500, 5,000, and 50,000 collected rallies. The collection-size unit is rallies.
+- `ablation_discount_factor.csv`: discount factors 0.5, 0.6, 0.7, 0.8, 0.9, and 1.0. Every plotted marker corresponds to a supplied measurement.
 
-The discount sweep is labeled alpha-potential in the paper at the user's explicit request, superseding the earlier Nash-Q label. The image's original title is retained above for provenance. The training-size image has no method label; its caption therefore does not assign a method. The gamma=1 endpoint is an undiscounted episodic comparison; the discounted infinite-horizon tail bound in the paper applies only for gamma<1.
+Both files include all five supplied metrics: static mean, static minimum, success against Random, success against Q-IBR, and success against Other proposed. The static-minimum column uses the supplied label, without the earlier averaging qualifier. The identity of Other proposed is not inferred from the data. The gamma=1 endpoint represents undiscounted episodic returns.
 
 Regenerate both vector PDFs and PNG previews from the repository root:
 
@@ -12,4 +13,4 @@ Regenerate both vector PDFs and PNG previews from the repository root:
 python scripts/plot_ablations.py
 ```
 
-Requires Python, NumPy, and Matplotlib. Plots use only these CSV values and do not fit or smooth the measured points.
+Requires Python, NumPy, and Matplotlib. Figures use consistent colors and markers across metrics. Collection size uses a logarithmic axis; discount factor uses a linear axis. Lines connect supplied measurements without fitting or smoothing, and all five metrics are included in both plots.

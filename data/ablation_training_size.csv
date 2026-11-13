@@ -1,4 +1,4 @@
-training_size,random_success_pct,static_mean_pct,average_static_minimum_pct
-500,68.13,74.58,45.00
-5000,73.75,81.73,67.75
-50000,77.00,84.17,70.63
+collection_size_rallies,static_mean_pct,static_minimum_pct,random_success_pct,ibr_success_pct,other_proposed_success_pct
+500,73.6,43.0,67.0,47.0,47.0
+5000,83.7,69.0,73.0,59.0,45.0
+50000,85.9,77.0,75.0,61.0,48.0

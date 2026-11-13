@@ -37,33 +37,42 @@ def save(fig, stem):
     plt.close(fig)
 
 
+SERIES = (
+    ("static_mean_pct", "Static mean", "#D55E00", "s", "--"),
+    ("static_minimum_pct", "Static minimum", "#009E73", "^", "-."),
+    ("random_success_pct", "vs. Random", "#0072B2", "o", "-"),
+    ("ibr_success_pct", "vs. Q-IBR", "#CC79A7", "D", ":"),
+    ("other_proposed_success_pct", "vs. Other proposed", "#666666", "v", (0, (4, 1, 1, 1))),
+)
+
+
+def plot_series(ax, x, data):
+    for key, label, color, marker, style in SERIES:
+        ax.plot(x, data[key], label=label, color=color, marker=marker,
+                linestyle=style, linewidth=1.5, markersize=4)
+    ax.legend(loc="lower right", frameon=True, edgecolor="0.85",
+              labelspacing=0.25, borderpad=0.35, handlelength=2.1)
+
+
 def main():
     data = np.genfromtxt(ROOT / "data/ablation_training_size.csv", delimiter=",", names=True)
     fig, ax = axes()
-    x = data["training_size"]
-    for key, label, color, marker, style in (
-        ("random_success_pct", "Random opponent", "#0072B2", "o", "-"),
-        ("static_mean_pct", "Static mean", "#D55E00", "s", "--"),
-        ("average_static_minimum_pct", "Average static minimum", "#009E73", "^", "-."),
-    ):
-        ax.plot(x, data[key], label=label, color=color, marker=marker, linestyle=style, linewidth=1.8, markersize=4)
+    x = data["collection_size_rallies"]
+    plot_series(ax, x, data)
     ax.set_xscale("log")
     ax.xaxis.set_major_locator(FixedLocator(x))
     ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:,.0f}"))
     ax.minorticks_off()
-    ax.set_xlabel("Training-set size")
-    ax.legend(loc="lower right", frameon=True, edgecolor="0.85")
+    ax.set_xlabel("Collection size (rallies)")
     save(fig, "ablation_training_size")
 
     data = np.genfromtxt(ROOT / "data/ablation_discount_factor.csv", delimiter=",", names=True)
     fig, ax = axes()
     x = data["discount_factor"]
-    ax.plot(x, data["random_success_pct"], label="Random opponent", color="#0072B2", marker="o", linewidth=1.8, markersize=4)
-    ax.plot(x, data["static_mean_pct"], label="15 fixed opponents (mean)", color="#D55E00", marker="s", linestyle="--", linewidth=1.8, markersize=4)
+    plot_series(ax, x, data)
     ax.set_xlabel(r"Discount factor $\gamma$")
-    ax.set_xticks([0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    ax.set_xticks(x)
     ax.set_xlim(0.48, 1.02)
-    ax.legend(loc="lower right", frameon=True, edgecolor="0.85")
     save(fig, "ablation_discount_factor")
 
 
