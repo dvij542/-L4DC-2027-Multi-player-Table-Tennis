@@ -464,48 +464,48 @@ We train each player to maximize its discounted point utility using proximal pol
 We alternate learner updates while holding the opponent fixed within each update round. We maintain a pool of frozen opponent snapshots and sample one at the beginning of each rally, retaining it for the rally's duration. This exposes the learner to earlier strategies as well as recent opponents. Both players experience attack and defense transitions, and rewards and value targets follow their player identities through role switches. A critic estimates the player's return, and entropy regularization encourages exploration of target and preparation choices. Terminal rollouts use the observed point outcome. For rollouts truncated before termination, we bootstrap the remaining return from the critic.
 
 
-\section{Human-Play Processing and Position-Conditioned Comparison}
-\label{app:humananalysis}
-\paragraph{Human strategy and video-based analysis.}
-Human table tennis strategies have been inferred through inverse reinforcement learning \citep{muelling2014strategies}, while TTNet and LATTE-MV support video analysis and anticipation \citep{voeikov2020ttnet,etaat2025latte}. This appendix compares human shot-placement distributions with simulated play.
+% \section{Human-Play Processing and Position-Conditioned Comparison}
+% \label{app:humananalysis}
+% \paragraph{Human strategy and video-based analysis.}
+% Human table tennis strategies have been inferred through inverse reinforcement learning \citep{muelling2014strategies}, while TTNet and LATTE-MV support video analysis and anticipation \citep{voeikov2020ttnet,etaat2025latte}. This appendix compares human shot-placement distributions with simulated play.
 
-\label{sec:resultshuman}
-We compare learned strategies with human gameplay reconstructed from monocular videos using LATTE-MV \citep{etaat2025latte}.
+% \label{sec:resultshuman}
+% We compare learned strategies with human gameplay reconstructed from monocular videos using LATTE-MV \citep{etaat2025latte}.
 
-\paragraph{Position-conditioned return heatmaps.}
-We extract player locations, racket-contact events, and returned-ball landing locations from human table tennis videos, using calibrated table coordinates and exchange segmentation \citep{etaat2025latte,voeikov2020ttnet}. We mark exchanges at net crossings and express them in a common attacker-oriented frame so that left and right have the same meaning across players, videos, and simulation. At the matched net-crossing decision epoch, we assign the attacker and opponent to lateral bins $s^{\attack},s^{\defend}\in\{L,C,R\}$. We analyze all nine position combinations, including attacker-left/opponent-left and attacker-left/opponent-right. We assign valid first-bounce locations on the opponent's half to the five return regions using a fixed coordinate partition. Table~\ref{tab:humancorrelation} presents the human--model comparison.
+% \paragraph{Position-conditioned return heatmaps.}
+% We extract player locations, racket-contact events, and returned-ball landing locations from human table tennis videos, using calibrated table coordinates and exchange segmentation \citep{etaat2025latte,voeikov2020ttnet}. We mark exchanges at net crossings and express them in a common attacker-oriented frame so that left and right have the same meaning across players, videos, and simulation. At the matched net-crossing decision epoch, we assign the attacker and opponent to lateral bins $s^{\attack},s^{\defend}\in\{L,C,R\}$. We analyze all nine position combinations, including attacker-left/opponent-left and attacker-left/opponent-right. We assign valid first-bounce locations on the opponent's half to the five return regions using a fixed coordinate partition. Table~\ref{tab:humancorrelation} presents the human--model comparison.
 
-For each context $s=(s^{\attack},s^{\defend})$, we estimate
-\begin{equation}
-  h_{\mathrm{human}}(k\mid s)=
-  \frac{n_{\mathrm{human}}(k,s)}
-       {\sum_{j=1}^{5}n_{\mathrm{human}}(j,s)},
-  \quad k\in\mathcal{K},
-  \label{eq:humanheatmap}
-\end{equation}
-where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. We apply the same procedure to realized landing locations from each proposed method. Table~\ref{tab:humancorrelation} summarizes Pearson correlations and Jensen--Shannon divergences between the human and model distributions. Correlation is undefined for a constant distribution, so such cases are reported separately. This comparison characterizes how the learned policies and random baseline distribute returns relative to human play in each position context. The analysis concerns conditional shot-placement patterns within the shared target representation.
+% For each context $s=(s^{\attack},s^{\defend})$, we estimate
+% \begin{equation}
+%   h_{\mathrm{human}}(k\mid s)=
+%   \frac{n_{\mathrm{human}}(k,s)}
+%        {\sum_{j=1}^{5}n_{\mathrm{human}}(j,s)},
+%   \quad k\in\mathcal{K},
+%   \label{eq:humanheatmap}
+% \end{equation}
+% where $n_{\mathrm{human}}(k,s)$ counts observed returns in target region $k$ and context $s$. We apply the same procedure to realized landing locations from each proposed method. Table~\ref{tab:humancorrelation} summarizes Pearson correlations and Jensen--Shannon divergences between the human and model distributions. Correlation is undefined for a constant distribution, so such cases are reported separately. This comparison characterizes how the learned policies and random baseline distribute returns relative to human play in each position context. The analysis concerns conditional shot-placement patterns within the shared target representation.
 
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{lccccccc}
-\toprule
-Context & Human returns & $\rho_{\alpha}$ & $\rho_{\mathrm{RL}}$ & $\rho_{\mathrm{rand}}$ & $\mathrm{JS}_{\alpha}$ & $\mathrm{JS}_{\mathrm{RL}}$ & $\mathrm{JS}_{\mathrm{rand}}$\\
-\midrule
-$(L,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(L,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(L,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(C,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(C,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(C,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(R,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(R,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-$(R,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
-\bottomrule
-\end{tabular}
-\caption{Position-conditioned human comparison. The correlations $\rho$ and Jensen--Shannon divergences $\mathrm{JS}$ compare realized landing distributions against human play. The subscript $\mathrm{rand}$ denotes the random baseline.}
-\label{tab:humancorrelation}
-\end{table}
+% \begin{table}[t]
+% \centering
+% \small
+% \begin{tabular}{lccccccc}
+% \toprule
+% Context & Human returns & $\rho_{\alpha}$ & $\rho_{\mathrm{RL}}$ & $\rho_{\mathrm{rand}}$ & $\mathrm{JS}_{\alpha}$ & $\mathrm{JS}_{\mathrm{RL}}$ & $\mathrm{JS}_{\mathrm{rand}}$\\
+% \midrule
+% $(L,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(L,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(L,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(C,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(C,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(C,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(R,L)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(R,C)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% $(R,R)$ & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank & \resultblank\\
+% \bottomrule
+% \end{tabular}
+% \caption{Position-conditioned human comparison. The correlations $\rho$ and Jensen--Shannon divergences $\mathrm{JS}$ compare realized landing distributions against human play. The subscript $\mathrm{rand}$ denotes the random baseline.}
+% \label{tab:humancorrelation}
+% \end{table}
 
 \section{Low-Level Execution Controllers}
 \label{app:execution}
