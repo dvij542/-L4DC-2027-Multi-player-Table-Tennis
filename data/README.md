@@ -13,4 +13,4 @@ Regenerate both vector PDFs and PNG previews from the repository root:
 python scripts/plot_ablations.py
 ```
 
-Requires Python, NumPy, and Matplotlib. Figures use consistent colors and markers across metrics. Collection size uses a logarithmic axis; discount factor uses a linear axis. Lines connect supplied measurements without fitting or smoothing, and all five metrics are included in both plots.
+Requires Python, NumPy, and Matplotlib. Figures display static mean, static minimum, success against Random, and success against Q-IBR, using consistent colors and markers. The supplied Other proposed measurements remain in the CSV files and are excluded from both figures. Collection size uses a logarithmic axis; discount factor uses a linear axis. Lines connect supplied measurements without fitting or smoothing, and the four displayed metrics are included in both plots.

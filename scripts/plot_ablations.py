@@ -42,7 +42,6 @@ SERIES = (
     ("static_minimum_pct", "Static minimum", "#009E73", "^", "-."),
     ("random_success_pct", "vs. Random", "#0072B2", "o", "-"),
     ("ibr_success_pct", "vs. Q-IBR", "#CC79A7", "D", ":"),
-    ("other_proposed_success_pct", "vs. Other proposed", "#666666", "v", (0, (4, 1, 1, 1))),
 )
 
 

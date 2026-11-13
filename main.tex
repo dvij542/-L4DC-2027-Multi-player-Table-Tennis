@@ -363,10 +363,10 @@ Self-play RL (argmax) & $0.13$ & $0.04$\\
 \label{sec:resultsablation}
 
 \paragraph{Training-data volume.}
-Figure~\ref{fig:datavolume} varies the number of collected rallies from 500 to 50,000. The static mean increases from 73.6\% to 85.9\%, and the static minimum increases from 43.0\% to 77.0\%. Win rates against Random and Q-IBR increase from 67.0\% to 75.0\% and from 47.0\% to 61.0\%, respectively. The largest gain is the 34.0-point increase in the static minimum, indicating improved performance against the most challenging fixed strategies. Against Other proposed, the win rates are 47.0\%, 45.0\%, and 48.0\% at the three collection sizes.
+Figure~\ref{fig:datavolume} varies the number of collected rallies from 500 to 50,000. The static mean increases from 73.6\% to 85.9\%, and the static minimum increases from 43.0\% to 77.0\%. Win rates against Random and Q-IBR increase from 67.0\% to 75.0\% and from 47.0\% to 61.0\%, respectively. The largest gain is the 34.0-point increase in the static minimum, indicating improved performance against the most challenging fixed strategies.
 
 \paragraph{Discount factor and effective horizon.}
-Figure~\ref{fig:discountfactor} evaluates $\gamma\in\{0.5,0.6,0.7,0.8,0.9,1.0\}$. The static mean varies from 83.7\% to 85.2\%, peaking at $\gamma=0.9$; the static minimum peaks at 76.0\% for $\gamma=0.6$. Against Random, the best win rate is 77.0\% at $\gamma=0.9$, while Q-IBR performance peaks at 60.0\% for $\gamma=0.8$. Win rates against Other proposed range from 45.0\% to 50.0\%. These differences show that the preferred discount factor depends on the opponent metric. The $\gamma=1$ endpoint evaluates undiscounted episodic returns.
+Figure~\ref{fig:discountfactor} evaluates $\gamma\in\{0.5,0.6,0.7,0.8,0.9,1.0\}$. The static mean varies from 83.7\% to 85.2\%, peaking at $\gamma=0.9$; the static minimum peaks at 76.0\% for $\gamma=0.6$. Against Random, the best win rate is 77.0\% at $\gamma=0.9$, while Q-IBR performance peaks at 60.0\% for $\gamma=0.8$. These differences show that the preferred discount factor depends on the opponent metric. The $\gamma=1$ endpoint evaluates undiscounted episodic returns.
 
 \begin{figure}[!tbp]
 \centering
@@ -381,7 +381,7 @@ Figure~\ref{fig:discountfactor} evaluates $\gamma\in\{0.5,0.6,0.7,0.8,0.9,1.0\}$
 \centering
 \vspace{0pt}
 \includegraphics[width=\linewidth]{Figures/ablation_discount_factor.pdf}
-\caption{$\alpha$-potential discount-factor ablation across all five opponent metrics.}
+\caption{$\alpha$-potential discount-factor ablation across four opponent metrics.}
 \label{fig:discountfactor}
 \end{minipage}
 \end{figure}
